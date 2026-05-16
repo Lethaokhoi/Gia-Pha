@@ -14,6 +14,7 @@ import {
   inviteEditorByEmail,
   listFamilyAccess,
   removeFamilyMember,
+  setFamilyMemberRole,
   revokeInvite,
   ensureAuthSession,
   cleanAuthParamsFromUrl,
@@ -633,19 +634,50 @@ async function renderShareAccess(familyId) {
             const role =
               m.role === "owner" ? "Chủ" : m.role === "viewer" ? "Chỉ xem" : "Chỉnh sửa";
             const email = escapeHtml(m.email || m.user_id || "");
-            const remove =
+            const uid = escapeHtml(m.user_id);
+            const actions =
               access.is_owner && m.role !== "owner"
-                ? `<button type="button" class="btn btn-sm share-remove" data-user-id="${escapeHtml(m.user_id)}">Gỡ</button>`
+                ? `<div class="share-member-actions">
+                    <select class="share-role-select" data-user-id="${uid}" aria-label="Quyền cho ${email}">
+                      <option value="editor"${m.role === "editor" ? " selected" : ""}>Chỉnh sửa</option>
+                      <option value="viewer"${m.role === "viewer" ? " selected" : ""}>Chỉ xem</option>
+                    </select>
+                    <button type="button" class="btn btn-sm primary share-role-apply" data-user-id="${uid}">Cấp lại quyền</button>
+                    <button type="button" class="btn btn-sm share-remove" data-user-id="${uid}">Gỡ</button>
+                  </div>`
                 : "";
-            return `<li><span>${email} <em>(${role})</em></span>${remove}</li>`;
+            return `<li><span class="share-member-label">${email} <em>(${role})</em></span>${actions}</li>`;
           })
           .join("")
       : `<li class="meta">Chưa có ai.</li>`;
 
+    membersUl.querySelectorAll(".share-role-apply").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const uid = btn.getAttribute("data-user-id");
+        if (!uid) return;
+        const row = btn.closest("li");
+        const sel = row?.querySelector(".share-role-select");
+        const role = sel?.value === "viewer" ? "viewer" : "editor";
+        try {
+          await setFamilyMemberRole(familyId, uid, role);
+          await renderShareAccess(familyId);
+          await refreshAccountUi();
+          alert(role === "viewer" ? "Đã cấp quyền chỉ xem." : "Đã cấp quyền chỉnh sửa.");
+        } catch (e) {
+          const msg = String(e?.message || e);
+          if (msg.includes("gp_set_family_member_role")) {
+            alert(msg + "\n\n→ Chạy supabase-viewer.sql trong Supabase → SQL Editor, F5 trang.");
+          } else {
+            alert(msg);
+          }
+        }
+      });
+    });
+
     membersUl.querySelectorAll(".share-remove").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const uid = btn.getAttribute("data-user-id");
-        if (!uid || !confirm("Gỡ quyền chỉnh sửa của người này?")) return;
+        if (!uid || !confirm("Gỡ quyền truy cập của người này?")) return;
         try {
           await removeFamilyMember(familyId, uid);
           await renderShareAccess(familyId);

@@ -386,6 +386,19 @@ async function listFamilyAccessFallback(sb, familyId) {
   return { members, invites, is_owner };
 }
 
+/** @param {string} familyId @param {string} userId @param {'editor' | 'viewer'} role */
+export async function setFamilyMemberRole(familyId, userId, role) {
+  const sb = getClient();
+  if (!sb) throw new Error("Chưa cấu hình Supabase.");
+  const r = role === "viewer" ? "viewer" : "editor";
+  const { error } = await sb.rpc("gp_set_family_member_role", {
+    p_family_id: familyId,
+    p_user_id: userId,
+    p_role: r,
+  });
+  if (error) throw error;
+}
+
 /** @param {string} familyId @param {string} userId */
 export async function removeFamilyMember(familyId, userId) {
   const sb = getClient();

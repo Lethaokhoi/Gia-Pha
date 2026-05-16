@@ -219,3 +219,39 @@ end;
 $$;
 
 grant execute on function public.gp_list_family_access(uuid) to authenticated;
+
+-- Chủ đổi quyền thành viên đã tham gia (editor | viewer)
+create or replace function public.gp_set_family_member_role(
+  p_family_id uuid,
+  p_user_id uuid,
+  p_role text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r text;
+begin
+  if auth.uid() is null then raise exception 'Cần đăng nhập'; end if;
+  if not public.gp_is_family_owner(p_family_id) then
+    raise exception 'Chỉ chủ gia phả';
+  end if;
+  if p_user_id = auth.uid() then
+    raise exception 'Không thể đổi quyền của chính bạn';
+  end if;
+  r := lower(trim(coalesce(p_role, 'editor')));
+  if r not in ('editor', 'viewer') then
+    raise exception 'Quyền không hợp lệ (editor hoặc viewer)';
+  end if;
+  update public.gp_family_members
+  set role = r
+  where family_id = p_family_id and user_id = p_user_id and role <> 'owner';
+  if not found then
+    raise exception 'Không tìm thấy thành viên hoặc không thể đổi quyền chủ';
+  end if;
+end;
+$$;
+
+grant execute on function public.gp_set_family_member_role(uuid, uuid, text) to authenticated;

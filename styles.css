@@ -2081,9 +2081,28 @@ body.show-tree-tab .print-root {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.35rem 0;
   border-bottom: 1px solid var(--border);
+}
+
+.share-member-label {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.share-member-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.share-role-select {
+  font-size: 0.85rem;
+  padding: 0.2rem 0.35rem;
+  max-width: 7.5rem;
 }
 
 .share-access-list .btn-sm {
