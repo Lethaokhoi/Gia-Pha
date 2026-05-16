@@ -1,3 +1,6 @@
+/** Tên hiển thị ở chân trang (copyright). */
+export const SITE_AUTHOR = "Chu Tuấn Khôi";
+
 /** Điền thông tin Supabase (Project Settings → API). */
 export const SUPABASE_URL = "https://ekeckqvdlfoasafoucvp.supabase.co";
 /** Phải là anon public (bắt đầu eyJ...), KHÔNG dùng sb_publishable_... */

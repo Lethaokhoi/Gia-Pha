@@ -382,7 +382,7 @@
           </ul>
         </div>
       </div>
-      <p class="site-footer-copy meta">© <span id="footer-year"></span> Gia phả</p>
+      <p class="site-footer-copy meta">© <span id="footer-year"></span> <span id="footer-author"></span> · Gia phả</p>
     </footer>
   </div>
 
@@ -396,9 +396,12 @@
   </div>
 
   <script type="module" src="app.js"></script>
-  <script>
+  <script type="module">
+    import { SITE_AUTHOR } from "./config.js";
     const y = document.getElementById("footer-year");
     if (y) y.textContent = String(new Date().getFullYear());
+    const a = document.getElementById("footer-author");
+    if (a && SITE_AUTHOR) a.textContent = SITE_AUTHOR;
   </script>
 </body>
 </html>

@@ -1,4 +1,7 @@
 /** Sao chép file này thành config.js và điền URL + anon key từ Supabase. */
+/** Tên hiển thị ở chân trang (copyright). */
+export const SITE_AUTHOR = "Họ và tên của bạn";
+
 export const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";
 export const SUPABASE_ANON_KEY = "YOUR_ANON_PUBLIC_KEY";
 

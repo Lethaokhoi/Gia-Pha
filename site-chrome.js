@@ -1,3 +1,5 @@
+import { SITE_AUTHOR } from "./config.js";
+
 /**
  * Header / footer dùng chung cho blog, điều khoản, bài viết.
  * @param {{ active?: 'app' | 'blog' | '' }} [opts]
@@ -8,6 +10,13 @@ export function mountSiteChrome(opts = {}) {
   const footerMount = document.getElementById("site-chrome-footer");
   if (headerMount) headerMount.innerHTML = buildHeader(active);
   if (footerMount) footerMount.innerHTML = buildFooter();
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function buildHeader(active) {
@@ -48,5 +57,5 @@ function buildFooter() {
         </ul>
       </div>
     </div>
-    <p class="site-footer-copy meta">© ${year} Gia phả. Dữ liệu do bạn sở hữu — xuất JSON bất cứ lúc nào.</p>`;
+    <p class="site-footer-copy meta">© ${year} ${escapeHtml(SITE_AUTHOR || "")} · Gia phả. Dữ liệu do bạn sở hữu — xuất JSON bất cứ lúc nào.</p>`;
 }
