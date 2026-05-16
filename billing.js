@@ -193,7 +193,19 @@ function escapeHtml(s) {
     .replace(/>/g, "&gt;");
 }
 
+function wireDialogBackdropClose(dialogId) {
+  const dlg = /** @type {HTMLDialogElement | null} */ (document.getElementById(dialogId));
+  if (!dlg || dlg.dataset.backdropCloseWired === "1") return;
+  dlg.dataset.backdropCloseWired = "1";
+  dlg.addEventListener("click", (e) => {
+    const inner = dlg.querySelector(".share-dialog-inner");
+    if (inner && !inner.contains(/** @type {Node} */ (e.target))) dlg.close();
+  });
+}
+
 export function initBillingPanel() {
+  wireDialogBackdropClose("upgrade-dialog");
+
   document.addEventListener("click", (ev) => {
     const t = /** @type {HTMLElement} */ (ev.target);
     const id = t.id;

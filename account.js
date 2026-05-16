@@ -197,6 +197,17 @@ function el(id) {
   return document.getElementById(id);
 }
 
+/** Bấm vùng tối / ngoài hộp thoại → đóng (như nút Đóng). */
+function wireDialogBackdropClose(dialogId) {
+  const dlg = /** @type {HTMLDialogElement | null} */ (el(dialogId));
+  if (!dlg || dlg.dataset.backdropCloseWired === "1") return;
+  dlg.dataset.backdropCloseWired = "1";
+  dlg.addEventListener("click", (e) => {
+    const inner = dlg.querySelector(".share-dialog-inner");
+    if (inner && !inner.contains(/** @type {Node} */ (e.target))) dlg.close();
+  });
+}
+
 export function setSyncStatus(text, kind = "") {
   const node = el("cloud-sync-status");
   if (!node) return;
@@ -801,6 +812,8 @@ function bindAccountEvents() {
     }
     openShareDialog();
   });
+
+  wireDialogBackdropClose("share-dialog");
 
   if (!shareDialogWired) {
     shareDialogWired = true;
