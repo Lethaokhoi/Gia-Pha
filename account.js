@@ -29,7 +29,7 @@ import {
 const ACTIVE_FAMILY_KEY = "giaPha_activeFamilyId";
 const LOCAL_ONLY_KEY = "giaPha_localOnly";
 
-/** @type {{ getState: () => { members: unknown[], focalId: string | null, treeScope: string }, applyState: (s: unknown) => void, setCloudMeta: (m: { familyId: string | null, updatedAt: string | null }) => void, setStorageUserId: (id: string | null) => void, replaceAppState: (s: { members: unknown[], focalId: string | null, treeScope?: string }) => void, refreshUi: () => void, onAuthGate?: (open: boolean) => void }} */
+/** @type {{ getState: () => { members: unknown[], focalId: string | null, treeScope: string }, applyState: (s: unknown) => void, setCloudMeta: (m: { familyId: string | null, updatedAt: string | null }) => void, setStorageUserId: (id: string | null) => void, replaceAppState: (s: { members: unknown[], focalId: string | null, treeScope?: string }) => void, refreshUi: () => void, onAuthGate?: (open: boolean) => void, isMemberFormDirty?: () => boolean, saveMemberFormDraft?: () => void }} */
 let hooks = {
   getState: () => ({ members: [], focalId: null, treeScope: "ca_hai" }),
   applyState: () => {},
@@ -38,6 +38,8 @@ let hooks = {
   replaceAppState: () => {},
   refreshUi: () => {},
   onAuthGate: () => {},
+  isMemberFormDirty: () => false,
+  saveMemberFormDraft: () => {},
 };
 
 let shareDialogWired = false;
@@ -88,6 +90,8 @@ export function initAccountPanel(h) {
   // Không gọi async trực tiếp trong callback — Supabase có thể không cập nhật session (đặc biệt sau Google OAuth).
   onAuthStateChange((session, event) => {
     applySessionToShell(session);
+    // Alt+Tab / làm mới tab thường chỉ TOKEN_REFRESHED — không tải lại gia phả (tránh ghi đè form đang nhập).
+    if (event === "TOKEN_REFRESHED") return;
     setTimeout(() => {
       refreshAccountUi(session).catch((e) => {
         console.error("refreshAccountUi", e);
@@ -348,15 +352,25 @@ async function refreshAccountUi(knownSession) {
       const loaded = await loadFamilyState(activeId);
       if (loaded) {
         hooks.setCloudMeta({ familyId: activeId, updatedAt: loaded.updatedAt });
-        hooks.applyState(loaded.state);
-        hooks.refreshUi();
-        if (billing?.is_unlimited) {
-          setSyncStatus("Gói không giới hạn thành viên. Đã đồng bộ đám mây.", "ok");
-        } else {
+        const formBusy = hooks.isMemberFormDirty?.();
+        if (formBusy) {
+          hooks.saveMemberFormDraft?.();
+          hooks.refreshUi();
           setSyncStatus(
-            `Miễn phí ${billing?.member_count ?? "?"}/${billing?.max_members ?? 30} thành viên. Đã đồng bộ đám mây.`,
-            "ok"
+            "Đang nhập dở — chưa tải lại từ máy chủ. Bấm «Lưu» hoặc xóa form trước khi đồng bộ.",
+            "warn"
           );
+        } else {
+          hooks.applyState(loaded.state);
+          hooks.refreshUi();
+          if (billing?.is_unlimited) {
+            setSyncStatus("Gói không giới hạn thành viên. Đã đồng bộ đám mây.", "ok");
+          } else {
+            setSyncStatus(
+              `Miễn phí ${billing?.member_count ?? "?"}/${billing?.max_members ?? 30} thành viên. Đã đồng bộ đám mây.`,
+              "ok"
+            );
+          }
         }
       }
     } catch (e) {

@@ -200,6 +200,11 @@ function setCloudMeta(meta) {
     cloudMeta.unsub = subscribeFamily(meta.familyId, ({ state: remote, updatedAt }) => {
       if (updatedAt === cloudMeta.updatedAt) return;
       if (cloudSaveInFlight) return;
+      if (isMemberFormDirty()) {
+        saveMemberFormDraft();
+        cloudMeta.updatedAt = updatedAt;
+        return;
+      }
       if (!confirm("Gia phả trên máy chủ vừa được cập nhật (người khác đang sửa). Tải bản mới?")) return;
       cloudMeta.updatedAt = updatedAt;
       const parsed = parseStoredState({
@@ -1454,6 +1459,16 @@ document.querySelectorAll(".tab").forEach((tab) => {
 form?.addEventListener("input", scheduleMemberFormDraftSave);
 form?.addEventListener("change", scheduleMemberFormDraftSave);
 
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    saveMemberFormDraft();
+    return;
+  }
+  if (document.visibilityState === "visible" && activeAppTab === "members") {
+    restoreMemberFormDraftIfAny();
+  }
+});
+
 setTreeTabVisible(false);
 
 document.getElementById("btn-print")?.addEventListener("click", () => {
@@ -1627,6 +1642,8 @@ initAccountPanel({
     renderTree(membersSorted(), state.focalId);
     if (activeAppTab === "members") restoreMemberFormDraftIfAny();
   },
+  isMemberFormDirty: () => isMemberFormDirty(),
+  saveMemberFormDraft: () => saveMemberFormDraft(),
   onAuthGate: (open) => {
     if (open) bootMainApp();
   },
