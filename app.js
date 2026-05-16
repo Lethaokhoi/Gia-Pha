@@ -1117,19 +1117,6 @@ function openMemberFromTree(id) {
   openForm(id);
 }
 
-/** Một lần bấm: chỉ chọn tên; không mở form nếu chưa sửa gì. */
-function selectMember(id) {
-  if (memberFormOpen && isMemberFormDirty()) {
-    saveMemberFormDraft();
-    closeMemberForm({ skipDraftSave: true });
-  } else if (memberFormOpen) {
-    closeMemberForm({ skipDraftSave: true });
-    clearMemberFormDraft();
-  }
-  selectedMemberId = id;
-  renderMemberList();
-}
-
 function renderMemberList() {
   memberList.innerHTML = "";
   if (!state.members.length) {
@@ -1148,11 +1135,7 @@ function renderMemberList() {
     b.textContent = p.hoTen || "(Không tên)";
     if (memberFormOpen && p.id === editingId) b.classList.add("active");
     else if (!memberFormOpen && p.id === selectedMemberId) b.classList.add("active");
-    b.addEventListener("click", () => selectMember(p.id));
-    b.addEventListener("dblclick", (ev) => {
-      ev.preventDefault();
-      openForm(p.id);
-    });
+    b.addEventListener("click", () => openForm(p.id));
     li.appendChild(b);
     memberList.appendChild(li);
   }
@@ -1183,6 +1166,12 @@ function openForm(id, opts = {}) {
   const curId = fId.value || editingId || "";
   if (!opts.skipDraftSave && memberFormOpen && nextId !== curId && isMemberFormDirty()) {
     saveMemberFormDraft();
+  }
+  // Đã mở đúng người, chưa sửa gì — giữ form (Alt+Tab / bấm lại không reset).
+  if (nextId === curId && memberFormOpen && !isMemberFormDirty()) {
+    renderMemberList();
+    setFormReadOnly(isFamilyReadOnly());
+    return;
   }
 
   setMemberFormOpen(true);
@@ -1629,7 +1618,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
     const prevTab = activeAppTab;
     const tid = tab.getAttribute("data-tab") || "members";
-    if (prevTab === "members" && tid !== "members") {
+    if (prevTab === "members" && tid !== "members" && memberFormOpen && isMemberFormDirty()) {
       saveMemberFormDraft();
     }
 
@@ -1649,25 +1638,26 @@ form?.addEventListener("input", scheduleMemberFormDraftSave);
 form?.addEventListener("change", scheduleMemberFormDraftSave);
 
 function restoreMemberFormDraftIfNeeded() {
-  const draft = loadMemberFormDraft();
-  if (!draft?.dirty || !isDraftMeaningful(draft)) return;
-  const wantId = draft.memberId || "";
-  const curId = fId.value || editingId || "";
-  if (memberFormOpen && curId === wantId) {
-    if (!isMemberFormDirty()) {
+  if (memberFormOpen) {
+    setMemberFormOpen(true);
+    const draft = loadMemberFormDraft();
+    if (!draft?.dirty || !isDraftMeaningful(draft)) return;
+    const wantId = draft.memberId || "";
+    const curId = fId.value || editingId || "";
+    if (curId === wantId && !isMemberFormDirty()) {
       applyMemberFormDraft(draft);
       formBaseline = draft.baseline || snapshotFormBaseline();
     }
     return;
   }
-  if (!memberFormOpen) {
-    openForm(draft.mode === "edit" && draft.memberId ? draft.memberId : null, { skipDraftSave: true });
-  }
+  const draft = loadMemberFormDraft();
+  if (!draft?.dirty || !isDraftMeaningful(draft)) return;
+  openForm(draft.mode === "edit" && draft.memberId ? draft.memberId : null, { skipDraftSave: true });
 }
 
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") {
-    if (memberFormOpen) saveMemberFormDraft();
+    if (memberFormOpen && isMemberFormDirty()) saveMemberFormDraft();
     return;
   }
   if (document.visibilityState === "visible") {
