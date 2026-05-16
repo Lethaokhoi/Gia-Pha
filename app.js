@@ -590,6 +590,145 @@ const pendingExistingList = document.getElementById("pending-existing-children")
 let editingId = null;
 /** @type {string[]} */
 let pendingExistingChildIds = [];
+/** Tab ứng dụng đang mở (members | tree | backup) */
+let activeAppTab = "members";
+let memberFormDraftTimer = 0;
+
+function memberFormDraftKey() {
+  const uid = storageUserId || "local";
+  const fid = cloudMeta.familyId || "local";
+  return `giaPha_formDraft_${uid}_${fid}`;
+}
+
+/** @param {ReturnType<typeof captureMemberFormDraft>} draft */
+function isDraftMeaningful(draft) {
+  if (!draft) return false;
+  if ((draft.hoTen || "").trim()) return true;
+  if (draft.gioiTinh || draft.ngaySinh || draft.thangSinh || draft.namSinh || draft.namMat) return true;
+  if (draft.chaId || draft.meId || draft.voChongId) return true;
+  if ((draft.anhUrl || "").trim() || (draft.ghiChu || "").trim()) return true;
+  if ((draft.newChildRows || []).length) return true;
+  if ((draft.pendingExistingChildIds || []).length) return true;
+  return false;
+}
+
+function captureMemberFormDraft() {
+  return {
+    v: 1,
+    memberId: fId.value || editingId || "",
+    mode: fId.value || editingId ? "edit" : "new",
+    hoTen: fName.value,
+    gioiTinh: fGender.value,
+    ngaySinh: String(fBirthDay.value ?? ""),
+    thangSinh: String(fBirthMonth.value ?? ""),
+    namSinh: fBirth.value,
+    namMat: fDeath.value,
+    chaId: fFather.value || "",
+    meId: fMother.value || "",
+    voChongId: fSpouse.value || "",
+    anhUrl: fAvatarUrl?.value || "",
+    anhFocus: fAvatarFocus?.value || "",
+    ghiChu: fNote.value,
+    newChildRows: collectNewChildRows(),
+    pendingExistingChildIds: [...pendingExistingChildIds],
+    savedAt: Date.now(),
+  };
+}
+
+/** @param {ReturnType<typeof captureMemberFormDraft>} draft */
+function applyMemberFormDraft(draft) {
+  if (!draft || draft.v !== 1) return false;
+
+  editingId = draft.mode === "edit" && draft.memberId ? draft.memberId : null;
+  fId.value = draft.memberId || "";
+  formTitle.textContent = draft.mode === "edit" ? "Sửa thông tin" : "Thêm người";
+  btnDelete.disabled = !draft.memberId;
+
+  fName.value = draft.hoTen || "";
+  fGender.value = draft.gioiTinh || "";
+  fBirthDay.value = draft.ngaySinh || "";
+  fBirthMonth.value = draft.thangSinh || "";
+  fBirth.value = draft.namSinh || "";
+  fDeath.value = draft.namMat || "";
+  fNote.value = draft.ghiChu || "";
+  if (fAvatarUrl) fAvatarUrl.value = draft.anhUrl || "";
+  if (fAvatarFocus) fAvatarFocus.value = sanitizeAnhFocus(draft.anhFocus) || "";
+  updateAvatarPreview(draft.anhUrl || "");
+
+  clearNewChildRows();
+  const rows = draft.newChildRows || [];
+  if (rows.length) {
+    for (const row of rows) appendChildRow(row);
+  } else if (draft.mode === "new") {
+    appendChildRow();
+  }
+
+  pendingExistingChildIds = [...(draft.pendingExistingChildIds || [])];
+
+  fillRelationSelects();
+  fFather.value = draft.chaId || "";
+  fMother.value = draft.meId || "";
+  fSpouse.value = draft.voChongId || "";
+
+  renderExistingChildren(editingId);
+  fillExistingChildSelect();
+  renderPendingExistingChildren();
+  renderMemberList();
+  return true;
+}
+
+function isMemberFormDirty() {
+  return isDraftMeaningful(captureMemberFormDraft());
+}
+
+function saveMemberFormDraft() {
+  if (!isMemberFormDirty()) {
+    try {
+      sessionStorage.removeItem(memberFormDraftKey());
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
+  try {
+    sessionStorage.setItem(memberFormDraftKey(), JSON.stringify(captureMemberFormDraft()));
+  } catch {
+    /* ignore quota */
+  }
+}
+
+/** @returns {ReturnType<typeof captureMemberFormDraft> | null} */
+function loadMemberFormDraft() {
+  try {
+    const raw = sessionStorage.getItem(memberFormDraftKey());
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    return d && d.v === 1 ? d : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearMemberFormDraft() {
+  try {
+    sessionStorage.removeItem(memberFormDraftKey());
+  } catch {
+    /* ignore */
+  }
+}
+
+function scheduleMemberFormDraftSave() {
+  clearTimeout(memberFormDraftTimer);
+  memberFormDraftTimer = window.setTimeout(() => saveMemberFormDraft(), 350);
+}
+
+function restoreMemberFormDraftIfAny() {
+  const draft = loadMemberFormDraft();
+  if (!draft || !isDraftMeaningful(draft)) return;
+  const curId = fId.value || editingId || "";
+  if (curId === draft.memberId && isMemberFormDirty()) return;
+  applyMemberFormDraft(draft);
+}
 
 function updateAvatarPreview(url) {
   if (!fAvatarPreview) return;
@@ -873,7 +1012,14 @@ function applyInferredParentsToExisting(child, parentId, parentGender, spouseId)
   if (meId) child.meId = meId;
 }
 
-function openForm(id) {
+/** @param {string | null} id @param {{ skipDraftRestore?: boolean, skipDraftSave?: boolean }} [opts] */
+function openForm(id, opts = {}) {
+  const nextId = id || "";
+  const curId = fId.value || editingId || "";
+  if (!opts.skipDraftSave && nextId !== curId && isMemberFormDirty()) {
+    saveMemberFormDraft();
+  }
+
   pendingExistingChildIds = [];
   editingId = id;
   const p = id ? state.members.find((m) => m.id === id) : null;
@@ -921,6 +1067,16 @@ function openForm(id) {
   }
   if (avatarUploadStatus) avatarUploadStatus.textContent = "";
   if (fAvatarFile) fAvatarFile.value = "";
+
+  if (!opts.skipDraftRestore) {
+    const draft = loadMemberFormDraft();
+    const mid = fId.value || editingId || "";
+    if (draft && isDraftMeaningful(draft) && draft.memberId === mid) {
+      applyMemberFormDraft(draft);
+      return;
+    }
+  }
+
   renderMemberList();
   fillExistingChildSelect();
   renderPendingExistingChildren();
@@ -1193,6 +1349,7 @@ form.addEventListener("submit", (e) => {
   }
 
   if (!saveState(state)) return;
+  clearMemberFormDraft();
   const b = getCurrentBilling();
   if (b) {
     b.memberCount = state.members.length;
@@ -1233,8 +1390,9 @@ btnDelete.addEventListener("click", () => {
   }
   if (state.focalId === delId) state.focalId = null;
   saveState(state);
+  clearMemberFormDraft();
   fillFocalSelects();
-  openForm(null);
+  openForm(null, { skipDraftRestore: true, skipDraftSave: true });
   renderTree(membersSorted(), state.focalId);
 });
 
@@ -1272,17 +1430,29 @@ function setTreeTabVisible(isTree) {
 
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
+    const prevTab = activeAppTab;
+    const tid = tab.getAttribute("data-tab") || "members";
+    if (prevTab === "members" && tid !== "members") {
+      saveMemberFormDraft();
+    }
+
     document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
     document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
     tab.classList.add("active");
-    const tid = tab.getAttribute("data-tab");
     document.getElementById(`panel-${tid}`)?.classList.add("active");
+    activeAppTab = tid;
     setTreeTabVisible(tid === "tree");
     if (tid === "tree") {
       renderTree(membersSorted(), state.focalId);
     }
+    if (tid === "members" && prevTab !== "members") {
+      restoreMemberFormDraftIfAny();
+    }
   });
 });
+
+form?.addEventListener("input", scheduleMemberFormDraftSave);
+form?.addEventListener("change", scheduleMemberFormDraftSave);
 
 setTreeTabVisible(false);
 
@@ -1343,6 +1513,8 @@ document.getElementById("import-file")?.addEventListener("change", (ev) => {
 
 /** @param {{ members: any[], focalId: string | null, treeScope?: string }} parsed @param {{ skipCloud?: boolean }} [opts] */
 function applyRestoredState(parsed, opts = {}) {
+  const keepDraft = isMemberFormDirty() ? captureMemberFormDraft() : null;
+
   state = {
     members: parsed.members,
     focalId: parsed.focalId ?? null,
@@ -1354,7 +1526,17 @@ function applyRestoredState(parsed, opts = {}) {
   fillRelationSelects();
   renderMemberList();
   renderTree(membersSorted(), state.focalId);
-  openForm(state.members[0]?.id ?? null);
+
+  if (keepDraft && isDraftMeaningful(keepDraft)) {
+    try {
+      sessionStorage.setItem(memberFormDraftKey(), JSON.stringify(keepDraft));
+    } catch {
+      /* ignore */
+    }
+    applyMemberFormDraft(keepDraft);
+  } else {
+    openForm(state.members[0]?.id ?? null, { skipDraftRestore: true, skipDraftSave: true });
+  }
 }
 
 document.getElementById("btn-restore-backup")?.addEventListener("click", () => {
@@ -1443,6 +1625,7 @@ initAccountPanel({
     resyncRelationFieldsIfEditing();
     renderMemberList();
     renderTree(membersSorted(), state.focalId);
+    if (activeAppTab === "members") restoreMemberFormDraftIfAny();
   },
   onAuthGate: (open) => {
     if (open) bootMainApp();
