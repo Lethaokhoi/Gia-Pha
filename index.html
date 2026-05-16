@@ -17,10 +17,26 @@
     </header>
 
     <section id="app-gate" class="app-gate">
+      <section class="landing-hero card">
+        <h2>Gia phả trực tuyến cho dòng họ</h2>
+        <p class="landing-lead">Lưu cây phả hệ, ảnh chân dung, in sơ đồ — đồng bộ đám mây và chia sẻ với họ hàng (sửa chung hoặc chỉ xem).</p>
+        <ul class="landing-features">
+          <li>Danh sách thành viên + cây gia phả tương tác</li>
+          <li>Mời bằng email hoặc mã — quyền sửa / chỉ xem</li>
+          <li>Link xem công khai không cần đăng nhập</li>
+          <li>Sao lưu JSON, in đẹp (Ctrl+P)</li>
+        </ul>
+        <p class="landing-legal meta">
+          <a href="terms.html">Điều khoản sử dụng</a>
+          ·
+          <a href="privacy.html">Chính sách quyền riêng tư</a>
+        </p>
+      </section>
+
       <div class="card" id="cloud-config-hint">
         <h2>Bật chỉnh sửa chung (một lần)</h2>
         <p>Tạo project <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a>, chạy script SQL, điền <code>config.js</code>. Dùng <strong>anon public</strong> (bắt đầu <code>eyJ…</code>), không dùng <code>sb_publishable_…</code>. Nếu lỗi tạo gia phả, chạy thêm <code>supabase-fix-rls.sql</code>.</p>
-        <p class="hint"><strong>Redirect URL</strong> (Supabase → Authentication → URL Configuration) phải trùng địa chỉ trang, ví dụ <code>http://127.0.0.1:5500/Gia_pha/index.html</code>.</p>
+        <p class="hint"><strong>Redirect URL</strong> (Supabase → Authentication → URL Configuration) phải trùng địa chỉ trang, ví dụ <code>http://127.0.0.1:5500/Gia_pha/index.html</code>. Tính năng xem công khai / quyền chỉ xem: chạy thêm <code>supabase-viewer.sql</code>.</p>
         <button type="button" id="cloud-btn-local-only" class="btn">Dùng chỉ trên máy này (không đăng nhập)</button>
         <details class="cloud-sql-details">
           <summary>Script SQL (copy)</summary>
@@ -45,6 +61,20 @@
                 <input type="password" id="cloud-login-password" autocomplete="current-password" placeholder="••••••••" />
               </label>
               <button type="button" id="cloud-btn-signin" class="btn primary btn-block">Đăng nhập</button>
+              <p class="cloud-auth-switch">
+                <button type="button" class="btn-link" id="cloud-show-forgot">Quên mật khẩu?</button>
+              </p>
+            </div>
+            <div id="cloud-forgot-panel" class="cloud-forgot-panel" hidden>
+              <p class="hint">Nhập email đã đăng ký — Supabase gửi link đặt lại mật khẩu.</p>
+              <label class="cloud-field">
+                <span class="cloud-field-label">Email</span>
+                <input type="email" id="cloud-forgot-email" autocomplete="email" />
+              </label>
+              <button type="button" id="cloud-btn-forgot" class="btn primary btn-block">Gửi email đặt lại</button>
+              <p class="cloud-auth-switch">
+                <button type="button" class="btn-link" id="cloud-hide-forgot">Quay lại đăng nhập</button>
+              </p>
             </div>
             <div class="cloud-auth-divider" aria-hidden="true"><span>hoặc</span></div>
             <button type="button" id="cloud-btn-google-login" class="btn btn-google btn-block">
@@ -114,14 +144,35 @@
       <button type="button" id="btn-upgrade-premium" class="btn btn-upgrade" hidden>Nâng cấp</button>
       <button type="button" id="cloud-btn-create-family" class="btn">+ Tạo gia phả (chủ)</button>
       <button type="button" id="top-btn-share" class="btn primary">Chia sẻ / cấp quyền</button>
+      <div class="workspace-join" id="workspace-join">
+        <input type="text" id="cloud-join-code" class="workspace-join-code" placeholder="Mã mời" maxlength="12" autocomplete="off" />
+        <select id="cloud-join-role" class="workspace-join-role" title="Quyền khi tham gia">
+          <option value="editor">Sửa</option>
+          <option value="viewer">Chỉ xem</option>
+        </select>
+        <button type="button" id="cloud-btn-join" class="btn">Tham gia</button>
+      </div>
       <input type="text" id="cloud-family-name" class="workspace-family-name" placeholder="Tên gia phả mới" hidden />
     </div>
 
+    <p id="workspace-readonly-banner" class="workspace-readonly-banner" hidden>Bạn đang xem gia phả này (chỉ đọc — không lưu được).</p>
     <p id="cloud-sync-status" class="cloud-sync-status cloud-sync-status--local" aria-live="polite">Đang tải…</p>
 
     <section id="panel-members" class="panel active">
-      <div class="toolbar">
+      <div class="toolbar toolbar-members">
         <button type="button" id="btn-add" class="btn primary">Thêm người</button>
+        <label class="inline member-search-wrap">
+          Tìm
+          <input type="search" id="member-search" placeholder="Tên…" autocomplete="off" />
+        </label>
+        <label class="inline member-filter-wrap">
+          Giới tính
+          <select id="member-filter-gender">
+            <option value="">Tất cả</option>
+            <option value="nam">Nam</option>
+            <option value="nu">Nữ</option>
+          </select>
+        </label>
         <label class="inline">
           Gốc xem cây
           <select id="focal-select"></select>
@@ -228,7 +279,7 @@
         </label>
         <button type="button" id="btn-print" class="btn primary">In gia phả</button>
       </div>
-      <p class="hint">Sơ đồ dưới đây giống bản <strong>in</strong> (vợ chồng một khung, xếp theo ngày sinh, nét nối xuống con). Phần cuối là bảng nội/ngoại chi tiết. Nhấn <strong>In gia phả</strong> (Ctrl+P) để in.</p>
+      <p class="hint">Sơ đồ dưới đây giống bản <strong>in</strong> (vợ chồng một khung, xếp theo ngày sinh, nét nối xuống con). <strong>Bấm vào ô ảnh</strong> trên cây để mở chi tiết thành viên. Nhấn <strong>In gia phả</strong> (Ctrl+P) để in.</p>
     </section>
 
     <section id="panel-backup" class="panel">
@@ -252,10 +303,25 @@
 
     <dialog id="share-dialog" class="share-dialog">
       <form method="dialog" class="share-dialog-inner">
-        <h2>Chia sẻ quyền chỉnh sửa</h2>
+        <h2>Chia sẻ gia phả</h2>
         <p class="hint">Chỉ chủ gia phả mới mời được. Người được mời phải đăng ký bằng đúng email.</p>
+        <div id="share-public-block" class="share-public-block card" hidden>
+          <h3>Link xem công khai</h3>
+          <p class="hint">Ai có link cũng xem được cây (không sửa, không cần đăng nhập).</p>
+          <p class="meta">Mã mời: <code id="share-invite-code">—</code></p>
+          <div class="share-public-url-row">
+            <input type="text" id="share-public-url" readonly />
+            <button type="button" id="share-copy-public" class="btn">Sao chép link</button>
+          </div>
+        </div>
         <label>Email người được mời
           <input type="email" id="share-invite-email" autocomplete="email" />
+        </label>
+        <label>Quyền
+          <select id="share-invite-role">
+            <option value="editor">Chỉnh sửa</option>
+            <option value="viewer">Chỉ xem</option>
+          </select>
         </label>
         <div class="form-actions">
           <button type="button" id="share-btn-invite" class="btn primary">Gửi lời mời</button>

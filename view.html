@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Xem gia phả</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="view-page">
+  <header class="view-header">
+    <h1 id="view-title">Gia phả</h1>
+    <p id="view-status" class="meta">Đang tải…</p>
+    <p class="view-actions">
+      <a href="index.html">Đăng nhập / chỉnh sửa</a>
+      ·
+      <button type="button" id="view-btn-print" class="btn">In (Ctrl+P)</button>
+    </p>
+  </header>
+  <div id="tree-display" class="tree-display view-tree" aria-live="polite"></div>
+  <script type="module" src="view.js"></script>
+</body>
+</html>

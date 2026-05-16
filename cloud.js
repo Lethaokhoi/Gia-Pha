@@ -158,6 +158,15 @@ export async function signOut() {
   await sb.auth.signOut();
 }
 
+/** @param {string} email */
+export async function resetPasswordForEmail(email) {
+  const sb = getClient();
+  if (!sb) throw new Error("Chưa cấu hình Supabase (config.js).");
+  const redirectTo = authRedirectUrl();
+  const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+  if (error) throw error;
+}
+
 /**
  * @param {string} userId
  * @returns {Promise<{ id: string, name: string, invite_code: string, role: string, updated_at: string }[]>}
@@ -266,16 +275,56 @@ export async function claimPendingInvites() {
   return typeof data === "number" ? data : 0;
 }
 
-/** @param {string} familyId @param {string} email */
-export async function inviteEditorByEmail(familyId, email) {
+/** @param {string} familyId @param {string} email @param {'editor' | 'viewer'} [role] */
+export async function inviteEditorByEmail(familyId, email, role = "editor") {
   const sb = getClient();
   if (!sb) throw new Error("Chưa cấu hình Supabase.");
-  const { data, error } = await sb.rpc("gp_invite_by_email", {
+  const r = role === "viewer" ? "viewer" : "editor";
+  let { data, error } = await sb.rpc("gp_invite_by_email", {
     p_family_id: familyId,
     p_email: email.trim(),
+    p_role: r,
   });
+  if (error && (error.code === "PGRST202" || String(error.message || "").includes("p_role"))) {
+    ({ data, error } = await sb.rpc("gp_invite_by_email", {
+      p_family_id: familyId,
+      p_email: email.trim(),
+    }));
+  }
   if (error) throw error;
   return data;
+}
+
+/** @param {string} familyId */
+export async function getFamilyShareInfo(familyId) {
+  const sb = getClient();
+  if (!sb) throw new Error("Chưa cấu hình Supabase.");
+  const { data, error } = await sb.rpc("gp_get_family_share_info", { p_family_id: familyId });
+  if (error) throw error;
+  if (!data || typeof data !== "object") return null;
+  const o = /** @type {{ name?: string, invite_code?: string }} */ (data);
+  return { name: o.name || "", invite_code: o.invite_code || "" };
+}
+
+/** @param {string} inviteCode */
+export function buildPublicViewUrl(inviteCode) {
+  const base = location.href.replace(/[^/]*$/, "");
+  return `${base}view.html?code=${encodeURIComponent(String(inviteCode || "").trim().toUpperCase())}`;
+}
+
+/** @param {string} code */
+export async function fetchPublicFamilyByCode(code) {
+  const sb = getClient();
+  if (!sb) throw new Error("Chưa cấu hình Supabase.");
+  const { data, error } = await sb.rpc("gp_public_family_by_code", {
+    p_code: String(code || "").trim().toUpperCase(),
+  });
+  if (error) throw error;
+  if (!data || typeof data !== "object") return null;
+  const o = /** @type {{ name?: string, data?: unknown, invite_code?: string }} */ (data);
+  const parsed = parseFamilyPayload(o.data);
+  if (!parsed) return null;
+  return { name: o.name || "Gia phả", state: parsed, invite_code: o.invite_code || "" };
 }
 
 /** @param {string} familyId */
@@ -424,8 +473,8 @@ export async function revokeInvite(inviteId) {
   if (error) throw error;
 }
 
-/** @param {string} inviteCode */
-export async function joinFamilyByCode(inviteCode) {
+/** @param {string} inviteCode @param {'editor' | 'viewer'} [role] */
+export async function joinFamilyByCode(inviteCode, role = "editor") {
   const sb = getClient();
   if (!sb) throw new Error("Chưa cấu hình Supabase.");
   const {
@@ -434,7 +483,11 @@ export async function joinFamilyByCode(inviteCode) {
   if (!user) throw new Error("Cần đăng nhập trước.");
 
   const code = inviteCode.trim().toUpperCase();
-  const { data: familyId, error } = await sb.rpc("gp_join_by_invite", { p_code: code });
+  const r = role === "viewer" ? "viewer" : "editor";
+  let { data: familyId, error } = await sb.rpc("gp_join_by_invite", { p_code: code, p_role: r });
+  if (error && (error.code === "PGRST202" || String(error.message || "").includes("p_role"))) {
+    ({ data: familyId, error } = await sb.rpc("gp_join_by_invite", { p_code: code }));
+  }
   if (error) throw error;
   if (!familyId) throw new Error("Mã mời không đúng hoặc gia phả đã bị xóa.");
 

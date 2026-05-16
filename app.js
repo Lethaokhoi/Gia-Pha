@@ -1,7 +1,7 @@
 import { collectChartMembers, buildPrintDiagramHtml } from "./pedigree.js";
 import { isCloudConfigured } from "./config.js";
 import { saveFamilyState, subscribeFamily, uploadMemberAvatar } from "./cloud.js";
-import { initAccountPanel, setSyncStatus } from "./account.js";
+import { initAccountPanel, setSyncStatus, isFamilyReadOnly } from "./account.js";
 import {
   canAddMembers,
   showQuotaBlockedMessage,
@@ -184,6 +184,10 @@ function scheduleCloudSave(state) {
 }
 
 function saveState(state) {
+  if (isFamilyReadOnly()) {
+    alert("Bạn chỉ có quyền xem gia phả này — không lưu được.");
+    return false;
+  }
   const ok = saveStateLocal(state);
   if (ok) scheduleCloudSave(state);
   return ok;
@@ -593,6 +597,9 @@ const existingChildSelect = document.getElementById("existing-child-select");
 const pendingExistingList = document.getElementById("pending-existing-children");
 const memberFormEmpty = document.getElementById("member-form-empty");
 const btnFormClose = document.getElementById("btn-form-close");
+const memberSearchInput = document.getElementById("member-search");
+const memberFilterGender = document.getElementById("member-filter-gender");
+const formSubmitBtn = form?.querySelector('button[type="submit"]');
 
 let editingId = null;
 /** Form chi tiết chỉ hiện sau khi bấm tên trong danh sách hoặc «Thêm người». */
@@ -1044,13 +1051,69 @@ function renderExistingChildren(parentId) {
   }
 }
 
+function getMemberListFilters() {
+  const q = (memberSearchInput?.value || "").trim().toLowerCase();
+  const g = memberFilterGender?.value || "";
+  return { q, g };
+}
+
+function membersForList() {
+  const { q, g } = getMemberListFilters();
+  return state.members.filter((p) => {
+    if (g && p.gioiTinh !== g) return false;
+    if (q && !(p.hoTen || "").toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function setFormReadOnly(readOnly) {
+  if (!form) return;
+  form.querySelectorAll("input, select, textarea").forEach((el) => {
+    if (el.id === "f-id") return;
+    /** @type {HTMLInputElement} */ (el).disabled = readOnly;
+  });
+  if (formSubmitBtn) formSubmitBtn.hidden = readOnly;
+  btnDelete.hidden = readOnly || !fId.value;
+  btnAvatarUpload?.toggleAttribute("disabled", readOnly);
+  btnAvatarAutoFocus?.toggleAttribute("disabled", readOnly);
+  fAvatarFile?.toggleAttribute("disabled", readOnly);
+  document.getElementById("btn-add-child-row")?.toggleAttribute("hidden", readOnly);
+  document.getElementById("btn-add-existing-child")?.toggleAttribute("hidden", readOnly);
+}
+
+function applyFamilyReadOnlyUi() {
+  const ro = isFamilyReadOnly();
+  document.getElementById("btn-add")?.toggleAttribute("disabled", ro);
+  document.getElementById("btn-export")?.toggleAttribute("disabled", ro);
+  const importFile = document.getElementById("import-file");
+  if (importFile) importFile.disabled = ro;
+  document.getElementById("btn-restore-backup")?.toggleAttribute("disabled", ro);
+  document.getElementById("cloud-btn-create-family")?.toggleAttribute("disabled", ro);
+  if (memberFormOpen) setFormReadOnly(ro);
+}
+
+function switchToMembersTab() {
+  document.querySelector('.tab[data-tab="members"]')?.click();
+}
+
+function openMemberFromTree(id) {
+  if (!id) return;
+  switchToMembersTab();
+  openForm(id);
+}
+
 function renderMemberList() {
   memberList.innerHTML = "";
   if (!state.members.length) {
     memberList.innerHTML = "<li><em class=\"meta\">Chưa có ai. Bấm Thêm người.</em></li>";
     return;
   }
-  for (const p of state.members) {
+  const filtered = membersForList();
+  if (!filtered.length) {
+    memberList.innerHTML = "<li><em class=\"meta\">Không có ai khớp bộ lọc.</em></li>";
+    return;
+  }
+  for (const p of filtered) {
     const li = document.createElement("li");
     const b = document.createElement("button");
     b.type = "button";
@@ -1150,6 +1213,7 @@ function openForm(id, opts = {}) {
   renderMemberList();
   fillExistingChildSelect();
   renderPendingExistingChildren();
+  setFormReadOnly(isFamilyReadOnly());
 }
 
 function syncSpouseFields(member, oldSpouseId) {
@@ -1310,6 +1374,10 @@ document.getElementById("btn-add-existing-child")?.addEventListener("click", () 
 
 form.addEventListener("submit", (e) => {
   e.preventDefault();
+  if (isFamilyReadOnly()) {
+    alert("Bạn chỉ có quyền xem — không lưu được.");
+    return;
+  }
 
   const hoTenRaw = (fName.value || "").trim();
   if (!hoTenRaw) {
@@ -1441,6 +1509,10 @@ form.addEventListener("submit", (e) => {
 });
 
 document.getElementById("btn-add")?.addEventListener("click", () => {
+  if (isFamilyReadOnly()) {
+    alert("Bạn chỉ có quyền xem gia phả này.");
+    return;
+  }
   if (!canAddMembers(1)) {
     showQuotaBlockedMessage(1);
     return;
@@ -1448,7 +1520,20 @@ document.getElementById("btn-add")?.addEventListener("click", () => {
   openForm(null);
 });
 
+memberSearchInput?.addEventListener("input", () => renderMemberList());
+memberFilterGender?.addEventListener("change", () => renderMemberList());
+
+document.getElementById("tree-display")?.addEventListener("click", (ev) => {
+  const card = /** @type {HTMLElement | null} */ (ev.target)?.closest?.(
+    ".pedigree-card[data-id], .print-dia-card[data-id]"
+  );
+  if (!card) return;
+  const id = card.getAttribute("data-id");
+  if (id) openMemberFromTree(id);
+});
+
 btnDelete.addEventListener("click", () => {
+  if (isFamilyReadOnly()) return;
   const delId = fId.value;
   if (!delId || !confirm("Xóa hẳn người này? Liên kết cha/mẹ/vợ chồng của người khác có thể cần chỉnh lại.")) return;
 
@@ -1671,6 +1756,7 @@ function bootMainApp() {
   showBackupHintIfEmpty();
   renderTree(membersSorted(), state.focalId);
   closeMemberForm({ skipDraftSave: true });
+  applyFamilyReadOnlyUi();
 }
 
 initAccountPanel({
@@ -1688,6 +1774,7 @@ initAccountPanel({
     resyncRelationFieldsIfEditing();
     renderMemberList();
     renderTree(membersSorted(), state.focalId);
+    applyFamilyReadOnlyUi();
   },
   isMemberFormDirty: () => isMemberFormDirty(),
   saveMemberFormDraft: () => saveMemberFormDraft(),

@@ -2179,3 +2179,122 @@ body.show-tree-tab .print-root {
     print-color-adjust: exact;
   }
 }
+
+/* Landing, tìm kiếm, viewer, trang xem công khai */
+.landing-hero {
+  margin-bottom: 1rem;
+}
+
+.landing-lead {
+  font-size: 1.05rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.landing-features {
+  margin: 0 0 1rem 1.25rem;
+  line-height: 1.6;
+}
+
+.landing-legal a {
+  color: var(--accent, #8b4513);
+}
+
+.toolbar-members {
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.member-search-wrap input[type="search"] {
+  min-width: 10rem;
+}
+
+.workspace-join {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.workspace-join-code {
+  width: 7rem;
+  text-transform: uppercase;
+}
+
+.workspace-readonly-banner {
+  margin: 0.25rem 0 0;
+  padding: 0.5rem 0.75rem;
+  background: #fff8e6;
+  border: 1px solid #e6c200;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.workspace-family-role--viewer {
+  color: #6b5b00;
+}
+
+.cloud-forgot-panel {
+  margin: 0.75rem 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border, #ddd);
+}
+
+.share-public-block {
+  margin-bottom: 1rem;
+}
+
+.share-public-url-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.share-public-url-row input {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.pedigree-card[data-id],
+.print-dia-card[data-id] {
+  cursor: pointer;
+}
+
+.pedigree-card[data-id]:hover,
+.print-dia-card[data-id]:hover {
+  outline: 2px solid var(--accent, #8b4513);
+  outline-offset: 2px;
+}
+
+.legal-page {
+  max-width: 42rem;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.legal-card h2 {
+  margin-top: 1.25rem;
+  font-size: 1.1rem;
+}
+
+.view-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.view-header {
+  margin-bottom: 1rem;
+}
+
+.view-header h1 {
+  margin: 0 0 0.25rem;
+}
+
+.view-actions {
+  margin: 0.5rem 0 0;
+}
+
+.view-tree {
+  min-height: 200px;
+}

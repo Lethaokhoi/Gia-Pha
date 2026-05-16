@@ -18,6 +18,10 @@ import {
   ensureAuthSession,
   cleanAuthParamsFromUrl,
   getFamilyBilling,
+  resetPasswordForEmail,
+  joinFamilyByCode,
+  getFamilyShareInfo,
+  buildPublicViewUrl,
 } from "./cloud.js";
 import {
   setCurrentBilling,
@@ -48,8 +52,12 @@ let shareDialogWired = false;
 let lastLoadedFamilyId = "";
 /** @type {string | null} */
 let currentUserId = null;
-/** @type {'owner' | 'editor' | null} */
+/** @type {'owner' | 'editor' | 'viewer' | null} */
 let currentFamilyRole = null;
+
+export function isFamilyReadOnly() {
+  return currentFamilyRole === "viewer";
+}
 
 function activeFamilyKey(userId) {
   return userId ? `${ACTIVE_FAMILY_KEY}_${userId}` : ACTIVE_FAMILY_KEY;
@@ -411,31 +419,41 @@ function updateWorkspaceRoleHint(families, activeId) {
   const hint = el("workspace-family-role");
   const shareBtn = el("top-btn-share");
   const fam = families.find((f) => f.id === activeId);
-  currentFamilyRole = fam?.role === "owner" ? "owner" : fam?.role === "editor" ? "editor" : null;
+  currentFamilyRole =
+    fam?.role === "owner" ? "owner" : fam?.role === "editor" ? "editor" : fam?.role === "viewer" ? "viewer" : null;
   document.body.dataset.familyRole = currentFamilyRole || "";
 
   if (shareBtn) shareBtn.hidden = currentFamilyRole !== "owner";
 
+  const roBanner = el("workspace-readonly-banner");
+  if (roBanner) roBanner.hidden = currentFamilyRole !== "viewer";
+
   if (!hint) {
     refreshUpgradeButtonsForFamily(activeId);
+    hooks.refreshUi?.();
     return;
   }
   if (!fam) {
     hint.hidden = true;
     hint.textContent = "";
     refreshUpgradeButtonsForFamily("");
+    hooks.refreshUi?.();
     return;
   }
   hint.hidden = false;
   if (currentFamilyRole === "owner") {
-    hint.textContent = `Bạn là chủ «${fam.name}» — có thể mời người khác sửa.`;
+    hint.textContent = `Bạn là chủ «${fam.name}» — có thể mời người khác sửa hoặc chỉ xem.`;
     hint.className = "workspace-family-role meta workspace-family-role--owner";
+  } else if (currentFamilyRole === "viewer") {
+    hint.textContent = `«${fam.name}» — bạn chỉ được xem (không lưu / không thêm).`;
+    hint.className = "workspace-family-role meta workspace-family-role--viewer";
   } else {
-    hint.textContent = `«${fam.name}» — được chia sẻ, bạn chỉ sửa (không mời thêm).`;
+    hint.textContent = `«${fam.name}» — được chia sẻ, bạn có thể sửa (không mời thêm).`;
     hint.className = "workspace-family-role meta workspace-family-role--shared";
   }
 
   refreshUpgradeButtonsForFamily(activeId);
+  hooks.refreshUi?.();
 }
 
 /** @param {string} activeId */
@@ -463,6 +481,7 @@ async function renderFamilyList(userId) {
 
   const owned = families.filter((f) => f.role === "owner");
   const shared = families.filter((f) => f.role === "editor");
+  const viewers = families.filter((f) => f.role === "viewer");
 
   if (select) {
     select.innerHTML = `<option value="">— Chọn gia phả —</option>`;
@@ -481,8 +500,20 @@ async function renderFamilyList(userId) {
 
     if (shared.length) {
       const grp = document.createElement("optgroup");
-      grp.label = `Được chia sẻ (${shared.length})`;
+      grp.label = `Được chia sẻ — sửa (${shared.length})`;
       for (const f of shared) {
+        const opt = document.createElement("option");
+        opt.value = f.id;
+        opt.textContent = f.name;
+        grp.appendChild(opt);
+      }
+      select.appendChild(grp);
+    }
+
+    if (viewers.length) {
+      const grp = document.createElement("optgroup");
+      grp.label = `Chỉ xem (${viewers.length})`;
+      for (const f of viewers) {
         const opt = document.createElement("option");
         opt.value = f.id;
         opt.textContent = f.name;
@@ -511,6 +542,21 @@ async function openShareDialog() {
     return;
   }
   await renderShareAccess(familyId);
+  const pubBlock = el("share-public-block");
+  const codeEl = el("share-invite-code");
+  const urlInput = /** @type {HTMLInputElement | null} */ (el("share-public-url"));
+  try {
+    const info = await getFamilyShareInfo(familyId);
+    if (info?.invite_code && pubBlock && codeEl && urlInput) {
+      pubBlock.hidden = false;
+      codeEl.textContent = info.invite_code;
+      urlInput.value = buildPublicViewUrl(info.invite_code);
+    } else if (pubBlock) {
+      pubBlock.hidden = true;
+    }
+  } catch {
+    if (pubBlock) pubBlock.hidden = true;
+  }
   if (dlg?.showModal) dlg.showModal();
 }
 
@@ -541,7 +587,8 @@ async function renderShareAccess(familyId) {
     membersUl.innerHTML = access.members.length
       ? access.members
           .map((m) => {
-            const role = m.role === "owner" ? "Chủ" : "Được mời";
+            const role =
+              m.role === "owner" ? "Chủ" : m.role === "viewer" ? "Chỉ xem" : "Chỉnh sửa";
             const email = escapeHtml(m.email || m.user_id || "");
             const remove =
               access.is_owner && m.role !== "owner"
@@ -576,7 +623,7 @@ async function renderShareAccess(familyId) {
       ? access.invites
           .map(
             (i) =>
-              `<li><span>${escapeHtml(i.email)}</span>
+              `<li><span>${escapeHtml(i.email)} <em>(${i.role === "viewer" ? "chỉ xem" : "sửa"})</em></span>
               <button type="button" class="btn btn-sm share-revoke" data-invite-id="${escapeHtml(i.id)}">Hủy</button></li>`
           )
           .join("")
@@ -615,6 +662,37 @@ function bindAccountEvents() {
 
   el("cloud-show-signup")?.addEventListener("click", () => showAuthPanel("signup"));
   el("cloud-show-login")?.addEventListener("click", () => showAuthPanel("login"));
+
+  el("cloud-show-forgot")?.addEventListener("click", () => {
+    const panel = el("cloud-forgot-panel");
+    const loginForm = el("cloud-login-panel")?.querySelector(".cloud-auth-form");
+    if (panel) panel.hidden = false;
+    if (loginForm) /** @type {HTMLElement} */ (loginForm).hidden = true;
+    const email = /** @type {HTMLInputElement} */ (el("cloud-login-email"))?.value || "";
+    const forgotEmail = /** @type {HTMLInputElement} */ (el("cloud-forgot-email"));
+    if (forgotEmail && email) forgotEmail.value = email;
+  });
+
+  el("cloud-hide-forgot")?.addEventListener("click", () => {
+    const panel = el("cloud-forgot-panel");
+    const loginForm = el("cloud-login-panel")?.querySelector(".cloud-auth-form");
+    if (panel) panel.hidden = true;
+    if (loginForm) /** @type {HTMLElement} */ (loginForm).hidden = false;
+  });
+
+  el("cloud-btn-forgot")?.addEventListener("click", async () => {
+    const email = /** @type {HTMLInputElement} */ (el("cloud-forgot-email"))?.value?.trim() || "";
+    if (!email) {
+      alert("Nhập email.");
+      return;
+    }
+    try {
+      await resetPasswordForEmail(email);
+      alert("Đã gửi email đặt lại mật khẩu (kiểm tra hộp thư / spam).");
+    } catch (e) {
+      alert("Không gửi được: " + (e?.message || e));
+    }
+  });
 
   el("cloud-btn-signin")?.addEventListener("click", async () => {
     const email = /** @type {HTMLInputElement} */ (el("cloud-login-email"))?.value || "";
@@ -702,7 +780,9 @@ function bindAccountEvents() {
         return;
       }
       try {
-        await inviteEditorByEmail(familyId, email);
+        const roleSel = /** @type {HTMLSelectElement | null} */ (el("share-invite-role"));
+        const role = roleSel?.value === "viewer" ? "viewer" : "editor";
+        await inviteEditorByEmail(familyId, email, role);
         /** @type {HTMLInputElement} */ (el("share-invite-email")).value = "";
         await renderShareAccess(familyId);
         alert(`Đã gửi lời mời tới ${email}. Họ cần đăng ký/đăng nhập bằng đúng email đó.`);
@@ -713,6 +793,50 @@ function bindAccountEvents() {
             msg +
               "\n\n→ Chạy file supabase-fix-missing-functions.sql (hoặc supabase-fix-share.sql) trong Supabase → SQL Editor, đợi 10 giây, F5 trang rồi thử lại."
           );
+        } else {
+          alert(msg);
+        }
+      }
+    });
+
+    el("share-copy-public")?.addEventListener("click", async () => {
+      const url = /** @type {HTMLInputElement} */ (el("share-public-url"))?.value || "";
+      if (!url) return;
+      try {
+        await navigator.clipboard.writeText(url);
+        alert("Đã sao chép link xem công khai.");
+      } catch {
+        alert(url);
+      }
+    });
+
+    el("cloud-btn-join")?.addEventListener("click", async () => {
+      const code = /** @type {HTMLInputElement} */ (el("cloud-join-code"))?.value?.trim() || "";
+      const roleSel = /** @type {HTMLSelectElement | null} */ (el("cloud-join-role"));
+      const role = roleSel?.value === "viewer" ? "viewer" : "editor";
+      if (!code) {
+        alert("Nhập mã mời.");
+        return;
+      }
+      const session = await getSession();
+      if (!session?.user) {
+        alert("Cần đăng nhập trước.");
+        return;
+      }
+      try {
+        const fam = await joinFamilyByCode(code, role);
+        setActiveFamilyId(fam.id, session.user.id);
+        hooks.resetMemberFormOnFamilyChange(document.body.dataset.activeFamilyId || "");
+        hooks.setCloudMeta({ familyId: fam.id, updatedAt: null });
+        await refreshAccountUi(session);
+        const select = el("cloud-family-select");
+        if (select) select.value = fam.id;
+        setSyncStatus(`Đã tham gia «${fam.name}».`, "ok");
+        /** @type {HTMLInputElement} */ (el("cloud-join-code")).value = "";
+      } catch (e) {
+        const msg = String(e?.message || e);
+        if (msg.includes("gp_join_by_invite") || msg.includes("viewer")) {
+          alert(msg + "\n\n→ Chạy supabase-viewer.sql trong Supabase → SQL Editor, F5 trang.");
         } else {
           alert(msg);
         }
