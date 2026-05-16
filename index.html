@@ -132,9 +132,12 @@
           <h2>Danh sách</h2>
           <ul id="member-list" class="member-list"></ul>
         </div>
-        <div class="card form-wrap">
+        <div class="card form-wrap" id="member-form-panel">
           <h2 id="form-title">Chi tiết</h2>
-          <form id="member-form" class="member-form" autocomplete="off" novalidate>
+          <div id="member-form-empty" class="member-form-empty">
+            <p>Chọn một người trong <strong>Danh sách</strong> bên trái, hoặc bấm <strong>Thêm người</strong>.</p>
+          </div>
+          <form id="member-form" class="member-form" autocomplete="off" novalidate hidden>
             <input type="hidden" id="f-id" />
             <p class="hint form-draft-hint">Thông tin chưa bấm «Lưu» được giữ nháp khi đổi tab ứng dụng hoặc Alt+Tab sang cửa sổ khác.</p>
             <label>Họ tên *<input type="text" id="f-name" required /></label>
@@ -203,6 +206,7 @@
             <label>Ghi chú<textarea id="f-note" rows="3"></textarea></label>
             <div class="form-actions">
               <button type="submit" class="btn primary">Lưu</button>
+              <button type="button" id="btn-form-close" class="btn">Đóng</button>
               <button type="button" id="btn-delete" class="btn danger" disabled>Xóa người này</button>
             </div>
           </form>

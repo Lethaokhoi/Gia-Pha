@@ -29,7 +29,7 @@ import {
 const ACTIVE_FAMILY_KEY = "giaPha_activeFamilyId";
 const LOCAL_ONLY_KEY = "giaPha_localOnly";
 
-/** @type {{ getState: () => { members: unknown[], focalId: string | null, treeScope: string }, applyState: (s: unknown) => void, setCloudMeta: (m: { familyId: string | null, updatedAt: string | null }) => void, setStorageUserId: (id: string | null) => void, replaceAppState: (s: { members: unknown[], focalId: string | null, treeScope?: string }) => void, refreshUi: () => void, onAuthGate?: (open: boolean) => void, isMemberFormDirty?: () => boolean, saveMemberFormDraft?: () => void }} */
+/** @type {{ getState: () => { members: unknown[], focalId: string | null, treeScope: string }, applyState: (s: unknown) => void, setCloudMeta: (m: { familyId: string | null, updatedAt: string | null }) => void, setStorageUserId: (id: string | null) => void, replaceAppState: (s: { members: unknown[], focalId: string | null, treeScope?: string }) => void, refreshUi: () => void, onAuthGate?: (open: boolean) => void, isMemberFormDirty?: () => boolean, saveMemberFormDraft?: () => void, resetMemberFormOnFamilyChange?: (previousFamilyId: string) => void }} */
 let hooks = {
   getState: () => ({ members: [], focalId: null, treeScope: "ca_hai" }),
   applyState: () => {},
@@ -40,9 +40,12 @@ let hooks = {
   onAuthGate: () => {},
   isMemberFormDirty: () => false,
   saveMemberFormDraft: () => {},
+  resetMemberFormOnFamilyChange: () => {},
 };
 
 let shareDialogWired = false;
+/** Gia phả đã load members lần cuối — để biết khi nào cần đóng form / tải lại. */
+let lastLoadedFamilyId = "";
 /** @type {string | null} */
 let currentUserId = null;
 /** @type {'owner' | 'editor' | null} */
@@ -258,6 +261,8 @@ function refreshTopAuth(user) {
     currentUserId = null;
     hooks.setStorageUserId(null);
     setLocalOnlyMode(false);
+    hooks.resetMemberFormOnFamilyChange(document.body.dataset.activeFamilyId || "");
+    lastLoadedFamilyId = "";
     hooks.setCloudMeta({ familyId: null, updatedAt: null });
     hooks.replaceAppState(EMPTY_STATE);
     hooks.refreshUi();
@@ -342,6 +347,11 @@ async function refreshAccountUi(knownSession) {
   if (select) select.value = activeId || "";
   updateWorkspaceRoleHint(families, activeId);
 
+  const prevLoaded = lastLoadedFamilyId;
+  if (activeId !== prevLoaded) {
+    hooks.resetMemberFormOnFamilyChange(prevLoaded || document.body.dataset.activeFamilyId || "");
+  }
+
   document.body.dataset.activeFamilyId = activeId || "";
 
   if (activeId) {
@@ -352,33 +362,26 @@ async function refreshAccountUi(knownSession) {
       const loaded = await loadFamilyState(activeId);
       if (loaded) {
         hooks.setCloudMeta({ familyId: activeId, updatedAt: loaded.updatedAt });
-        const formBusy = hooks.isMemberFormDirty?.();
-        if (formBusy) {
-          hooks.saveMemberFormDraft?.();
-          hooks.refreshUi();
-          setSyncStatus(
-            "Đang nhập dở — chưa tải lại từ máy chủ. Bấm «Lưu» hoặc xóa form trước khi đồng bộ.",
-            "warn"
-          );
+        hooks.applyState(loaded.state);
+        hooks.refreshUi();
+        lastLoadedFamilyId = activeId;
+        if (billing?.is_unlimited) {
+          setSyncStatus("Gói không giới hạn thành viên. Đã đồng bộ đám mây.", "ok");
         } else {
-          hooks.applyState(loaded.state);
-          hooks.refreshUi();
-          if (billing?.is_unlimited) {
-            setSyncStatus("Gói không giới hạn thành viên. Đã đồng bộ đám mây.", "ok");
-          } else {
-            setSyncStatus(
-              `Miễn phí ${billing?.member_count ?? "?"}/${billing?.max_members ?? 30} thành viên. Đã đồng bộ đám mây.`,
-              "ok"
-            );
-          }
+          setSyncStatus(
+            `Miễn phí ${billing?.member_count ?? "?"}/${billing?.max_members ?? 30} thành viên. Đã đồng bộ đám mây.`,
+            "ok"
+          );
         }
       }
     } catch (e) {
       setSyncStatus("Lỗi tải: " + (e?.message || e), "err");
+      lastLoadedFamilyId = "";
       hooks.replaceAppState(EMPTY_STATE);
       hooks.refreshUi();
     }
   } else {
+    lastLoadedFamilyId = "";
     setCurrentBilling(null);
     document.body.dataset.activeFamilyId = "";
     hooks.setCloudMeta({ familyId: null, updatedAt: null });
@@ -660,6 +663,7 @@ function bindAccountEvents() {
     }
     try {
       const fam = await createFamily(name, EMPTY_STATE);
+      hooks.resetMemberFormOnFamilyChange(document.body.dataset.activeFamilyId || "");
       setActiveFamilyId(fam.id, session.user.id);
       hooks.setCloudMeta({ familyId: fam.id, updatedAt: fam.updated_at || "" });
       hooks.applyState(EMPTY_STATE);
@@ -677,13 +681,6 @@ function bindAccountEvents() {
     const uid = currentUserId;
     setActiveFamilyId(id, uid || undefined);
     hooks.setCloudMeta({ familyId: id || null, updatedAt: null });
-    if (!id) {
-      updateWorkspaceRoleHint([], "");
-      hooks.replaceAppState(EMPTY_STATE);
-      hooks.refreshUi();
-      setSyncStatus("Chưa chọn gia phả chung.", "warn");
-      return;
-    }
     await refreshAccountUi(await getSession());
   });
 

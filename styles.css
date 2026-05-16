@@ -202,6 +202,22 @@ textarea {
   border-bottom: 1px solid #e8e0d4;
 }
 
+.member-form-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.member-form-empty p {
+  margin: 0;
+}
+
+.member-form[hidden],
+.member-form-empty[hidden] {
+  display: none !important;
+}
+
 .member-list button {
   width: 100%;
   text-align: left;

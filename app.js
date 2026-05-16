@@ -591,18 +591,56 @@ const childrenNewRows = document.getElementById("children-new-rows");
 const existingChildren = document.getElementById("existing-children");
 const existingChildSelect = document.getElementById("existing-child-select");
 const pendingExistingList = document.getElementById("pending-existing-children");
+const memberFormEmpty = document.getElementById("member-form-empty");
+const btnFormClose = document.getElementById("btn-form-close");
 
 let editingId = null;
+/** Form chi tiết chỉ hiện sau khi bấm tên trong danh sách hoặc «Thêm người». */
+let memberFormOpen = false;
 /** @type {string[]} */
 let pendingExistingChildIds = [];
 /** Tab ứng dụng đang mở (members | tree | backup) */
 let activeAppTab = "members";
 let memberFormDraftTimer = 0;
 
-function memberFormDraftKey() {
+/** @param {string} [familyId] */
+function memberFormDraftKey(familyId) {
   const uid = storageUserId || "local";
-  const fid = cloudMeta.familyId || "local";
+  const fid = familyId ?? cloudMeta.familyId ?? "local";
   return `giaPha_formDraft_${uid}_${fid}`;
+}
+
+/** @param {string} [familyId] */
+function clearMemberFormDraftForFamily(familyId) {
+  try {
+    sessionStorage.removeItem(memberFormDraftKey(familyId));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Đóng form + xóa nháp khi đổi hoặc bỏ chọn gia phả (không mang dữ liệu sang gia phả khác). */
+function resetMemberFormOnFamilyChange(previousFamilyId) {
+  const prev = String(previousFamilyId || "").trim();
+  if (prev) clearMemberFormDraftForFamily(prev);
+  clearMemberFormDraft();
+  editingId = null;
+  pendingExistingChildIds = [];
+  if (form) {
+    form.reset();
+    form.hidden = true;
+  }
+  if (fId) fId.value = "";
+  if (fName) fName.value = "";
+  if (fAvatarUrl) fAvatarUrl.value = "";
+  if (fAvatarFocus) fAvatarFocus.value = "";
+  if (fNote) fNote.value = "";
+  updateAvatarPreview("");
+  clearNewChildRows();
+  if (avatarUploadStatus) avatarUploadStatus.textContent = "";
+  memberFormOpen = false;
+  if (memberFormEmpty) memberFormEmpty.hidden = false;
+  renderMemberList();
 }
 
 /** @param {ReturnType<typeof captureMemberFormDraft>} draft */
@@ -620,6 +658,7 @@ function isDraftMeaningful(draft) {
 function captureMemberFormDraft() {
   return {
     v: 1,
+    familyId: cloudMeta.familyId || "local",
     memberId: fId.value || editingId || "",
     mode: fId.value || editingId ? "edit" : "new",
     hoTen: fName.value,
@@ -644,6 +683,7 @@ function captureMemberFormDraft() {
 function applyMemberFormDraft(draft) {
   if (!draft || draft.v !== 1) return false;
 
+  setMemberFormOpen(true);
   editingId = draft.mode === "edit" && draft.memberId ? draft.memberId : null;
   fId.value = draft.memberId || "";
   formTitle.textContent = draft.mode === "edit" ? "Sửa thông tin" : "Thêm người";
@@ -682,7 +722,32 @@ function applyMemberFormDraft(draft) {
   return true;
 }
 
+function setMemberFormOpen(open) {
+  memberFormOpen = open;
+  if (form) form.hidden = !open;
+  if (memberFormEmpty) memberFormEmpty.hidden = open;
+}
+
+/** @param {{ skipDraftSave?: boolean }} [opts] */
+function closeMemberForm(opts = {}) {
+  if (!opts.skipDraftSave && memberFormOpen && isMemberFormDirty()) {
+    saveMemberFormDraft();
+  }
+  editingId = null;
+  pendingExistingChildIds = [];
+  if (form) form.reset();
+  if (fId) fId.value = "";
+  if (fAvatarFocus) fAvatarFocus.value = "";
+  updateAvatarPreview("");
+  if (avatarUploadStatus) avatarUploadStatus.textContent = "";
+  if (fAvatarFile) fAvatarFile.value = "";
+  clearNewChildRows();
+  setMemberFormOpen(false);
+  renderMemberList();
+}
+
 function isMemberFormDirty() {
+  if (!memberFormOpen) return false;
   return isDraftMeaningful(captureMemberFormDraft());
 }
 
@@ -708,7 +773,14 @@ function loadMemberFormDraft() {
     const raw = sessionStorage.getItem(memberFormDraftKey());
     if (!raw) return null;
     const d = JSON.parse(raw);
-    return d && d.v === 1 ? d : null;
+    if (!d || d.v !== 1) return null;
+    const curFamily = cloudMeta.familyId || "local";
+    if (d.familyId && d.familyId !== curFamily) return null;
+    if (d.mode === "edit" && d.memberId && !state.members.some((m) => m.id === d.memberId)) {
+      clearMemberFormDraft();
+      return null;
+    }
+    return d;
   } catch {
     return null;
   }
@@ -725,14 +797,6 @@ function clearMemberFormDraft() {
 function scheduleMemberFormDraftSave() {
   clearTimeout(memberFormDraftTimer);
   memberFormDraftTimer = window.setTimeout(() => saveMemberFormDraft(), 350);
-}
-
-function restoreMemberFormDraftIfAny() {
-  const draft = loadMemberFormDraft();
-  if (!draft || !isDraftMeaningful(draft)) return;
-  const curId = fId.value || editingId || "";
-  if (curId === draft.memberId && isMemberFormDirty()) return;
-  applyMemberFormDraft(draft);
 }
 
 function updateAvatarPreview(url) {
@@ -769,7 +833,7 @@ function fillRelationSelects() {
 
 /** Sau khi thay <option>, trình duyệt xóa value — gán lại từ người đang sửa (fix F5 / refreshUi). */
 function resyncRelationFieldsIfEditing() {
-  if (!editingId) return;
+  if (!memberFormOpen || !editingId) return;
   const p = state.members.find((m) => m.id === editingId);
   if (!p) return;
   fFather.value = p.chaId || "";
@@ -991,7 +1055,7 @@ function renderMemberList() {
     const b = document.createElement("button");
     b.type = "button";
     b.textContent = p.hoTen || "(Không tên)";
-    if (p.id === editingId) b.classList.add("active");
+    if (memberFormOpen && p.id === editingId) b.classList.add("active");
     b.addEventListener("click", () => openForm(p.id));
     li.appendChild(b);
     memberList.appendChild(li);
@@ -1021,10 +1085,11 @@ function applyInferredParentsToExisting(child, parentId, parentGender, spouseId)
 function openForm(id, opts = {}) {
   const nextId = id || "";
   const curId = fId.value || editingId || "";
-  if (!opts.skipDraftSave && nextId !== curId && isMemberFormDirty()) {
+  if (!opts.skipDraftSave && memberFormOpen && nextId !== curId && isMemberFormDirty()) {
     saveMemberFormDraft();
   }
 
+  setMemberFormOpen(true);
   pendingExistingChildIds = [];
   editingId = id;
   const p = id ? state.members.find((m) => m.id === id) : null;
@@ -1397,9 +1462,11 @@ btnDelete.addEventListener("click", () => {
   saveState(state);
   clearMemberFormDraft();
   fillFocalSelects();
-  openForm(null, { skipDraftRestore: true, skipDraftSave: true });
+  closeMemberForm({ skipDraftSave: true });
   renderTree(membersSorted(), state.focalId);
 });
+
+btnFormClose?.addEventListener("click", () => closeMemberForm());
 
 focalSelect.addEventListener("change", () => {
   state.focalId = focalSelect.value || null;
@@ -1450,9 +1517,6 @@ document.querySelectorAll(".tab").forEach((tab) => {
     if (tid === "tree") {
       renderTree(membersSorted(), state.focalId);
     }
-    if (tid === "members" && prevTab !== "members") {
-      restoreMemberFormDraftIfAny();
-    }
   });
 });
 
@@ -1460,12 +1524,8 @@ form?.addEventListener("input", scheduleMemberFormDraftSave);
 form?.addEventListener("change", scheduleMemberFormDraftSave);
 
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") {
+  if (document.visibilityState === "hidden" && memberFormOpen) {
     saveMemberFormDraft();
-    return;
-  }
-  if (document.visibilityState === "visible" && activeAppTab === "members") {
-    restoreMemberFormDraftIfAny();
   }
 });
 
@@ -1517,7 +1577,7 @@ document.getElementById("import-file")?.addEventListener("change", (ev) => {
       fillFocalSelects();
       renderMemberList();
       renderTree(membersSorted(), state.focalId);
-      openForm(state.members[0]?.id ?? null);
+      closeMemberForm({ skipDraftSave: true });
       alert("Đã nhập xong.");
     } catch (err) {
       alert("File không hợp lệ: " + (err?.message || err));
@@ -1528,8 +1588,6 @@ document.getElementById("import-file")?.addEventListener("change", (ev) => {
 
 /** @param {{ members: any[], focalId: string | null, treeScope?: string }} parsed @param {{ skipCloud?: boolean }} [opts] */
 function applyRestoredState(parsed, opts = {}) {
-  const keepDraft = isMemberFormDirty() ? captureMemberFormDraft() : null;
-
   state = {
     members: parsed.members,
     focalId: parsed.focalId ?? null,
@@ -1541,17 +1599,8 @@ function applyRestoredState(parsed, opts = {}) {
   fillRelationSelects();
   renderMemberList();
   renderTree(membersSorted(), state.focalId);
-
-  if (keepDraft && isDraftMeaningful(keepDraft)) {
-    try {
-      sessionStorage.setItem(memberFormDraftKey(), JSON.stringify(keepDraft));
-    } catch {
-      /* ignore */
-    }
-    applyMemberFormDraft(keepDraft);
-  } else {
-    openForm(state.members[0]?.id ?? null, { skipDraftRestore: true, skipDraftSave: true });
-  }
+  closeMemberForm({ skipDraftSave: true });
+  clearMemberFormDraft();
 }
 
 document.getElementById("btn-restore-backup")?.addEventListener("click", () => {
@@ -1621,8 +1670,7 @@ function bootMainApp() {
   renderMemberList();
   showBackupHintIfEmpty();
   renderTree(membersSorted(), state.focalId);
-  if (state.members.length) openForm(state.members[0].id);
-  else openForm(null);
+  closeMemberForm({ skipDraftSave: true });
 }
 
 initAccountPanel({
@@ -1640,10 +1688,10 @@ initAccountPanel({
     resyncRelationFieldsIfEditing();
     renderMemberList();
     renderTree(membersSorted(), state.focalId);
-    if (activeAppTab === "members") restoreMemberFormDraftIfAny();
   },
   isMemberFormDirty: () => isMemberFormDirty(),
   saveMemberFormDraft: () => saveMemberFormDraft(),
+  resetMemberFormOnFamilyChange: (previousFamilyId) => resetMemberFormOnFamilyChange(previousFamilyId),
   onAuthGate: (open) => {
     if (open) bootMainApp();
   },
