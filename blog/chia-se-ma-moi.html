@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mời họ hàng bằng email hoặc mã mời — Gia phả</title>
+  <link rel="stylesheet" href="../styles.css" />
+</head>
+<body class="site-page">
+  <header id="site-chrome-header" class="site-header"></header>
+
+  <main class="site-main article-page">
+    <article class="card article-card">
+      <p class="article-meta"><a href="../blog.html">← Blog</a> · Chia sẻ</p>
+      <h1>Mời họ hàng bằng email hoặc mã mời</h1>
+      <p>Cả họ cùng cập nhật một bản gia phả — không cần gửi file qua lại.</p>
+
+      <h2>Mời bằng email (chủ gia phả)</h2>
+      <ol>
+        <li>Bấm <strong>Chia sẻ / cấp quyền</strong>.</li>
+        <li>Nhập email người thân, chọn <strong>Chỉnh sửa</strong> hoặc <strong>Chỉ xem</strong>.</li>
+        <li>Họ đăng ký bằng <em>đúng email đó</em> — hệ thống tự nhận lời mời.</li>
+      </ol>
+
+      <h2>Tham gia bằng mã mời</h2>
+      <p>Trên thanh công cụ: nhập <strong>mã mời</strong> (chủ cung cấp) → chọn quyền → <strong>Tham gia</strong>. Tiện khi gửi qua Zalo.</p>
+
+      <h2>Link xem công khai</h2>
+      <p>Trong hộp chia sẻ có <strong>Link xem công khai</strong> — ai có link đều xem được cây, không cần tài khoản. Chỉ chủ mới tạo link; dùng khi họp họ hoặc in QR.</p>
+
+      <h2>Đổi quyền sau này</h2>
+      <p>Chủ có thể <strong>Cấp lại quyền</strong> (sửa ↔ chỉ xem) hoặc <strong>Gỡ</strong> truy cập trong danh sách người đang dùng chung.</p>
+
+      <p class="article-cta"><a href="../index.html" class="btn primary">Mở ứng dụng</a></p>
+    </article>
+  </main>
+
+  <footer id="site-chrome-footer" class="site-footer"></footer>
+  <script type="module">
+    import { mountSiteChrome } from "../site-chrome.js";
+    mountSiteChrome({ active: "blog" });
+  </script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>In cây gia phả đẹp — Gia phả</title>
+  <link rel="stylesheet" href="../styles.css" />
+</head>
+<body class="site-page">
+  <header id="site-chrome-header" class="site-header"></header>
+
+  <main class="site-main article-page">
+    <article class="card article-card">
+      <p class="article-meta"><a href="../blog.html">← Blog</a> · In ấn</p>
+      <h1>In cây gia phả đẹp (Ctrl+P)</h1>
+      <p>Sơ đồ in giống màn hình: vợ chồng một khung, xếp theo ngày sinh, nét nối xuống con.</p>
+
+      <h2>Chuẩn bị</h2>
+      <ul>
+        <li>Thêm đủ thành viên và chọn <strong>gốc xem cây</strong>.</li>
+        <li>Tab <strong>Cây gia phả</strong> — kiểm tra phạm vi: cả hai họ, nội hoặc ngoại.</li>
+        <li>Ảnh chân dung: dùng «Căn mặt tự động» (Chrome/Edge) nếu cần.</li>
+      </ul>
+
+      <h2>In</h2>
+      <p>Bấm <strong>In gia phả</strong> hoặc <kbd>Ctrl</kbd>+<kbd>P</kbd>. Chọn khổ A4 ngang nếu cây rộng. Tắt header/footer của trình duyệt nếu in thừa URL.</p>
+
+      <h2>Chia sẻ bản in PDF</h2>
+      <p>Trong hộp thoại in, chọn <strong>Lưu thành PDF</strong> để gửi họ hàng qua Zalo hoặc in tại quán photo.</p>
+
+      <p class="article-cta"><a href="../index.html" class="btn primary">Xem cây của bạn</a></p>
+    </article>
+  </main>
+
+  <footer id="site-chrome-footer" class="site-footer"></footer>
+  <script type="module">
+    import { mountSiteChrome } from "../site-chrome.js";
+    mountSiteChrome({ active: "blog" });
+  </script>
+</body>
+</html>

@@ -6,25 +6,34 @@
   <title>Chính sách quyền riêng tư — Gia phả</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="legal-page">
-  <main class="card legal-card">
-    <h1>Chính sách quyền riêng tư</h1>
-    <p class="meta">Cập nhật: tháng 5/2026</p>
-    <h2>Dữ liệu thu thập</h2>
-    <ul>
-      <li>Tài khoản: email, tên hiển thị (khi đăng ký / Google).</li>
-      <li>Gia phả: họ tên, ngày sinh, quan hệ, ảnh, ghi chú bạn nhập.</li>
-      <li>Kỹ thuật: nhật ký truy cập do nhà cung cấp lưu trữ (Supabase, Netlify).</li>
-    </ul>
-    <h2>Mục đích</h2>
-    <p>Lưu trữ, đồng bộ, hiển thị cây gia phả và chia sẻ theo quyền bạn cấp.</p>
-    <h2>Chia sẻ</h2>
-    <p>Chúng tôi không bán dữ liệu. Thông tin chỉ hiển thị cho người được mời hoặc qua link xem công khai do chủ gia phả tạo.</p>
-    <h2>Bảo mật</h2>
-    <p>Dữ liệu lưu trên Supabase có mã hóa đường truyền; bạn nên dùng mật khẩu mạnh và không chia link công khai nếu không muốn lộ.</p>
-    <h2>Liên hệ</h2>
-    <p>Yêu cầu xóa tài khoản hoặc dữ liệu: liên hệ chủ ứng dụng / quản trị project Supabase của bạn.</p>
-    <p><a href="index.html">← Về trang chính</a></p>
+<body class="site-page">
+  <header id="site-chrome-header" class="site-header"></header>
+
+  <main class="site-main">
+    <article class="card legal-card">
+      <h1>Chính sách quyền riêng tư</h1>
+      <p class="meta">Cập nhật: tháng 5/2026</p>
+      <h2>Dữ liệu thu thập</h2>
+      <ul>
+        <li>Tài khoản: email, tên hiển thị (khi đăng ký / Google).</li>
+        <li>Gia phả: họ tên, ngày sinh, quan hệ, ảnh, ghi chú bạn nhập.</li>
+        <li>Kỹ thuật: nhật ký truy cập do nhà cung cấp lưu trữ (Supabase, Netlify).</li>
+      </ul>
+      <h2>Mục đích</h2>
+      <p>Lưu trữ, đồng bộ, hiển thị cây gia phả và chia sẻ theo quyền bạn cấp.</p>
+      <h2>Chia sẻ</h2>
+      <p>Chúng tôi không bán dữ liệu. Thông tin chỉ hiển thị cho người được mời hoặc qua link xem công khai do chủ gia phả tạo.</p>
+      <h2>Bảo mật</h2>
+      <p>Dữ liệu lưu trên Supabase có mã hóa đường truyền; bạn nên dùng mật khẩu mạnh và không chia link công khai nếu không muốn lộ.</p>
+      <h2>Liên hệ</h2>
+      <p>Yêu cầu xóa tài khoản hoặc dữ liệu: liên hệ chủ ứng dụng / quản trị project Supabase của bạn.</p>
+    </article>
   </main>
+
+  <footer id="site-chrome-footer" class="site-footer"></footer>
+  <script type="module">
+    import { mountSiteChrome } from "./site-chrome.js";
+    mountSiteChrome();
+  </script>
 </body>
 </html>

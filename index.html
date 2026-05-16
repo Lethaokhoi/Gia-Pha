@@ -10,9 +10,13 @@
   <div class="app no-print">
     <header class="top top-bar">
       <div class="top-brand">
-        <h1>Gia phả</h1>
+        <h1><a href="index.html" class="top-brand-link">Gia phả</a></h1>
         <p class="sub">Quản lý dòng họ — chỉnh sửa chung khi được cấp quyền.</p>
       </div>
+      <nav class="site-nav site-nav--app" aria-label="Menu">
+        <a class="site-nav-link site-nav-link--active" href="index.html">Ứng dụng</a>
+        <a class="site-nav-link" href="blog.html">Blog</a>
+      </nav>
       <div class="top-auth" id="top-auth" aria-label="Tài khoản"></div>
     </header>
 
@@ -27,9 +31,11 @@
           <li>Sao lưu JSON, in đẹp (Ctrl+P)</li>
         </ul>
         <p class="landing-legal meta">
-          <a href="terms.html">Điều khoản sử dụng</a>
+          <a href="blog.html">Blog &amp; hướng dẫn</a>
           ·
-          <a href="privacy.html">Chính sách quyền riêng tư</a>
+          <a href="terms.html">Điều khoản</a>
+          ·
+          <a href="privacy.html">Quyền riêng tư</a>
         </p>
       </section>
 
@@ -354,6 +360,30 @@
         <p class="hint">Sau khi chuyển khoản, <strong>SePay</strong> tự kích hoạt gói (~1 phút). Cấu hình một lần: <code>SEPAY-SETUP.txt</code></p>
       </form>
     </dialog>
+
+    <footer class="site-footer site-footer--app no-print">
+      <div class="site-footer-inner">
+        <div class="site-footer-col">
+          <p class="site-footer-brand">Gia phả</p>
+          <p class="meta">Lưu cây phả hệ, ảnh chân dung, in sơ đồ — chia sẻ với họ hàng.</p>
+        </div>
+        <div class="site-footer-col">
+          <p class="site-footer-heading">Liên kết</p>
+          <ul class="site-footer-links">
+            <li><a href="blog.html">Blog &amp; hướng dẫn</a></li>
+            <li><a href="index.html#cloud-auth-block">Đăng ký miễn phí</a></li>
+          </ul>
+        </div>
+        <div class="site-footer-col">
+          <p class="site-footer-heading">Pháp lý</p>
+          <ul class="site-footer-links">
+            <li><a href="terms.html">Điều khoản</a></li>
+            <li><a href="privacy.html">Quyền riêng tư</a></li>
+          </ul>
+        </div>
+      </div>
+      <p class="site-footer-copy meta">© <span id="footer-year"></span> Gia phả</p>
+    </footer>
   </div>
 
   <!-- Vùng in: luôn render cây ở đây -->
@@ -366,5 +396,9 @@
   </div>
 
   <script type="module" src="app.js"></script>
+  <script>
+    const y = document.getElementById("footer-year");
+    if (y) y.textContent = String(new Date().getFullYear());
+  </script>
 </body>
 </html>

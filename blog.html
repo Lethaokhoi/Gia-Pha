@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Hướng dẫn tạo gia phả online, chia sẻ với họ hàng và in cây phả hệ đẹp." />
+  <title>Blog — Gia phả</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="site-page">
+  <header id="site-chrome-header" class="site-header"></header>
+
+  <main class="site-main blog-page">
+    <div class="blog-hero card">
+      <h1>Blog &amp; hướng dẫn</h1>
+      <p class="blog-hero-lead">Mẹo lưu dòng họ, mời người thân cùng sửa, in sơ đồ cho giỗ và họp họ — dùng ứng dụng Gia phả.</p>
+    </div>
+
+    <ul class="blog-list">
+      <li class="card blog-card">
+        <p class="blog-card-meta">Hướng dẫn · 5 phút đọc</p>
+        <h2><a href="blog/bat-dau-gia-pha.html">Bắt đầu gia phả online trong 10 phút</a></h2>
+        <p>Đăng ký, tạo gia phả, thêm ông bà cha mẹ và chọn người gốc để xem cây.</p>
+        <a class="blog-card-link" href="blog/bat-dau-gia-pha.html">Đọc tiếp →</a>
+      </li>
+      <li class="card blog-card">
+        <p class="blog-card-meta">Chia sẻ · 4 phút đọc</p>
+        <h2><a href="blog/chia-se-ma-moi.html">Mời họ hàng bằng email hoặc mã mời</a></h2>
+        <p>Phân quyền chỉnh sửa / chỉ xem, link công khai không cần đăng nhập.</p>
+        <a class="blog-card-link" href="blog/chia-se-ma-moi.html">Đọc tiếp →</a>
+      </li>
+      <li class="card blog-card">
+        <p class="blog-card-meta">In ấn · 3 phút đọc</p>
+        <h2><a href="blog/in-cay-gia-pha.html">In cây gia phả đẹp (Ctrl+P)</a></h2>
+        <p>Chọn gốc cây, phạm vi nội/ngoại và in cho giỗ, họp họ.</p>
+        <a class="blog-card-link" href="blog/in-cay-gia-pha.html">Đọc tiếp →</a>
+      </li>
+    </ul>
+
+    <p class="blog-cta card">
+      Sẵn sàng thử? <a href="index.html#cloud-auth-block" class="btn primary">Tạo gia phả miễn phí</a>
+    </p>
+  </main>
+
+  <footer id="site-chrome-footer" class="site-footer"></footer>
+  <script type="module">
+    import { mountSiteChrome } from "./site-chrome.js";
+    mountSiteChrome({ active: "blog" });
+  </script>
+</body>
+</html>
