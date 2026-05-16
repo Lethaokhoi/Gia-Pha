@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gia phả — Quản lý dòng họ</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app no-print">
+    <header class="top top-bar">
+      <div class="top-brand">
+        <h1>Gia phả</h1>
+        <p class="sub">Quản lý dòng họ — chỉnh sửa chung khi được cấp quyền.</p>
+      </div>
+      <div class="top-auth" id="top-auth" aria-label="Tài khoản"></div>
+    </header>
+
+    <section id="app-gate" class="app-gate">
+      <div class="card" id="cloud-config-hint">
+        <h2>Bật chỉnh sửa chung (một lần)</h2>
+        <p>Tạo project <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a>, chạy script SQL, điền <code>config.js</code>. Dùng <strong>anon public</strong> (bắt đầu <code>eyJ…</code>), không dùng <code>sb_publishable_…</code>. Nếu lỗi tạo gia phả, chạy thêm <code>supabase-fix-rls.sql</code>.</p>
+        <p class="hint"><strong>Redirect URL</strong> (Supabase → Authentication → URL Configuration) phải trùng địa chỉ trang, ví dụ <code>http://127.0.0.1:5500/Gia_pha/index.html</code>.</p>
+        <button type="button" id="cloud-btn-local-only" class="btn">Dùng chỉ trên máy này (không đăng nhập)</button>
+        <details class="cloud-sql-details">
+          <summary>Script SQL (copy)</summary>
+          <pre class="cloud-sql-pre" id="cloud-sql-script"></pre>
+        </details>
+      </div>
+
+      <div class="app-gate-auth card" id="cloud-auth-block">
+        <p class="hint cloud-auth-intro">Sau khi đăng nhập, bạn mới thấy menu Thành viên, Cây gia phả, Sao lưu. Chủ gia phả cấp quyền sửa bằng <strong>email</strong> cho từng người.</p>
+
+        <div id="cloud-login-panel" class="cloud-auth-panel">
+          <div class="cloud-auth-card">
+            <h2 class="cloud-auth-title">Đăng nhập</h2>
+            <p class="cloud-auth-lead">Dùng email hoặc tài khoản Google để vào gia phả.</p>
+            <div class="cloud-auth-form">
+              <label class="cloud-field">
+                <span class="cloud-field-label">Email</span>
+                <input type="email" id="cloud-login-email" autocomplete="username" placeholder="you@email.com" />
+              </label>
+              <label class="cloud-field">
+                <span class="cloud-field-label">Mật khẩu</span>
+                <input type="password" id="cloud-login-password" autocomplete="current-password" placeholder="••••••••" />
+              </label>
+              <button type="button" id="cloud-btn-signin" class="btn primary btn-block">Đăng nhập</button>
+            </div>
+            <div class="cloud-auth-divider" aria-hidden="true"><span>hoặc</span></div>
+            <button type="button" id="cloud-btn-google-login" class="btn btn-google btn-block">
+              <span class="btn-google-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.083 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C33.64 6.053 28.991 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 16.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C33.64 6.053 28.991 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l6.19 5.238C42.022 35.026 44 30.038 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+              </span>
+              Đăng nhập bằng Google
+            </button>
+            <p class="cloud-auth-switch">
+              Chưa có tài khoản?
+              <button type="button" class="btn-link" id="cloud-show-signup">Đăng ký</button>
+            </p>
+          </div>
+        </div>
+
+        <div id="cloud-signup-panel" class="cloud-auth-panel" hidden>
+          <div class="cloud-auth-card">
+            <h2 class="cloud-auth-title">Đăng ký</h2>
+            <p class="cloud-auth-lead">Tạo tài khoản để lưu gia phả trên đám mây và chia sẻ với người thân.</p>
+            <div class="cloud-auth-form">
+              <label class="cloud-field">
+                <span class="cloud-field-label">Họ tên</span>
+                <input type="text" id="cloud-signup-name" autocomplete="name" placeholder="Nguyễn Văn A" />
+              </label>
+              <label class="cloud-field">
+                <span class="cloud-field-label">Email</span>
+                <input type="email" id="cloud-signup-email" autocomplete="email" placeholder="you@email.com" />
+              </label>
+              <label class="cloud-field">
+                <span class="cloud-field-label">Mật khẩu</span>
+                <input type="password" id="cloud-signup-password" autocomplete="new-password" placeholder="Tối thiểu 6 ký tự" />
+              </label>
+              <button type="button" id="cloud-btn-signup" class="btn primary btn-block">Tạo tài khoản</button>
+            </div>
+            <div class="cloud-auth-divider" aria-hidden="true"><span>hoặc</span></div>
+            <button type="button" id="cloud-btn-google-signup" class="btn btn-google btn-block">
+              <span class="btn-google-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.083 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C33.64 6.053 28.991 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 16.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C33.64 6.053 28.991 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l6.19 5.238C42.022 35.026 44 30.038 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+              </span>
+              Đăng ký bằng Google
+            </button>
+            <p class="cloud-auth-switch">
+              Đã có tài khoản?
+              <button type="button" class="btn-link" id="cloud-show-login">Đăng nhập</button>
+            </p>
+          </div>
+        </div>
+        <div id="cloud-logged-in" hidden>
+          <p class="meta">Đã đăng nhập. Đang chuyển vào ứng dụng…</p>
+        </div>
+      </div>
+    </section>
+
+    <div id="app-main-shell" class="app-main-shell" hidden>
+    <nav class="tabs" role="tablist">
+      <button type="button" class="tab active" data-tab="members">Thành viên</button>
+      <button type="button" class="tab" data-tab="tree">Cây gia phả</button>
+      <button type="button" class="tab" data-tab="backup">Sao lưu / nhập</button>
+    </nav>
+
+    <div class="workspace-bar" id="workspace-bar">
+      <label class="workspace-family-label">Gia phả đang mở
+        <select id="cloud-family-select"></select>
+      </label>
+      <p id="workspace-family-role" class="workspace-family-role meta" hidden></p>
+      <div id="billing-quota-bar" class="billing-quota-bar" hidden></div>
+      <button type="button" id="btn-upgrade-premium" class="btn btn-upgrade" hidden>Nâng cấp</button>
+      <button type="button" id="cloud-btn-create-family" class="btn">+ Tạo gia phả (chủ)</button>
+      <button type="button" id="top-btn-share" class="btn primary">Chia sẻ / cấp quyền</button>
+      <input type="text" id="cloud-family-name" class="workspace-family-name" placeholder="Tên gia phả mới" hidden />
+    </div>
+
+    <p id="cloud-sync-status" class="cloud-sync-status cloud-sync-status--local" aria-live="polite">Đang tải…</p>
+
+    <section id="panel-members" class="panel active">
+      <div class="toolbar">
+        <button type="button" id="btn-add" class="btn primary">Thêm người</button>
+        <label class="inline">
+          Gốc xem cây
+          <select id="focal-select"></select>
+        </label>
+      </div>
+      <div class="layout-2">
+        <div class="card list-wrap">
+          <h2>Danh sách</h2>
+          <ul id="member-list" class="member-list"></ul>
+        </div>
+        <div class="card form-wrap">
+          <h2 id="form-title">Chi tiết</h2>
+          <form id="member-form" class="member-form" autocomplete="off" novalidate>
+            <input type="hidden" id="f-id" />
+            <label>Họ tên *<input type="text" id="f-name" required /></label>
+            <div class="avatar-field">
+              <span class="cloud-field-label">Ảnh đại diện</span>
+              <input type="hidden" id="f-avatar-focus" name="anhFocus" />
+              <div id="f-avatar-preview" class="avatar-preview" hidden></div>
+              <div class="avatar-upload-actions">
+                <label class="btn btn-avatar-pick">
+                  Chọn ảnh từ máy
+                  <input type="file" id="f-avatar-file" accept="image/jpeg,image/png,image/webp,image/gif" hidden />
+                </label>
+                <button type="button" id="btn-avatar-upload" class="btn primary">Tải ảnh lên</button>
+                <button type="button" id="btn-avatar-auto-focus" class="btn">Căn mặt tự động</button>
+              </div>
+              <p id="avatar-upload-status" class="avatar-upload-status meta" aria-live="polite"></p>
+              <label class="avatar-url-fallback">Hoặc dán link ảnh (URL)
+                <input type="url" id="f-avatar-url" placeholder="https://…" inputmode="url" />
+              </label>
+              <p class="hint avatar-field-hint">Cần đăng nhập + chọn gia phả để tải lên. JPG/PNG/WebP/GIF, tối đa 3MB. «Căn mặt tự động» dùng Chrome/Edge (xử lý trên máy); bấm Lưu thành viên để giữ tiêu điểm. Gói trả phí sau này có thể bổ sung nhận diện server / smart crop CDN.</p>
+            </div>
+            <label>Giới tính
+              <select id="f-gender">
+                <option value="">—</option>
+                <option value="nam">Nam</option>
+                <option value="nu">Nữ</option>
+              </select>
+            </label>
+            <div class="row-3">
+              <label>Ngày sinh
+                <input type="number" id="f-birth-day" min="1" max="31" placeholder="Ngày" />
+              </label>
+              <label>Tháng sinh
+                <input type="number" id="f-birth-month" min="1" max="12" placeholder="Tháng" />
+              </label>
+              <label>Năm sinh
+                <input type="number" id="f-birth" placeholder="VD: 1950" />
+              </label>
+            </div>
+            <label>Năm mất<input type="number" id="f-death" placeholder="Để trống nếu còn sống" /></label>
+            <label>Cha
+              <select id="f-father"></select>
+            </label>
+            <label>Mẹ
+              <select id="f-mother"></select>
+            </label>
+            <label>Vợ / chồng
+              <select id="f-spouse"></select>
+            </label>
+            <div class="card-section children-section">
+              <h3 class="section-title">Con cái</h3>
+              <p class="hint section-hint">Con đã có trong hệ thống (liên kết cha/mẹ với người này).</p>
+              <ul id="existing-children" class="existing-children"></ul>
+              <p class="hint section-hint">Con đã có — chọn trong danh sách, bấm <strong>Thêm làm con</strong>, rồi <strong>Lưu</strong> để gán cha/mẹ (theo giới tính và vợ/chồng trên form).</p>
+              <div class="existing-child-pick">
+                <label class="pick-label">Chọn người có sẵn
+                  <select id="existing-child-select"></select>
+                </label>
+                <button type="button" id="btn-add-existing-child" class="btn">Thêm làm con</button>
+              </div>
+              <ul id="pending-existing-children" class="pending-existing-children" aria-label="Con sẽ liên kết khi Lưu"></ul>
+              <p class="hint section-hint">Con mới — điền họ tên rồi bấm <strong>Lưu</strong> (tự gán cha/mẹ theo giới tính và vợ/chồng).</p>
+              <div id="children-new-rows" class="children-new-rows"></div>
+              <button type="button" id="btn-add-child-row" class="btn">+ Thêm dòng con</button>
+            </div>
+            <label>Ghi chú<textarea id="f-note" rows="3"></textarea></label>
+            <div class="form-actions">
+              <button type="submit" class="btn primary">Lưu</button>
+              <button type="button" id="btn-delete" class="btn danger" disabled>Xóa người này</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-tree" class="panel">
+      <div class="toolbar tree-toolbar">
+        <label>Người gốc (mình hoặc người thân)
+          <select id="tree-focal"></select>
+        </label>
+        <label>Phạm vi cây
+          <select id="tree-scope" title="Chỉ lọc người hiển thị trên cây và bản in">
+            <option value="ca_hai">Cả hai họ (nội + ngoại)</option>
+            <option value="noi">Chỉ nhà nội (+ vợ/chồng)</option>
+            <option value="ngoai">Chỉ nhà ngoại (+ vợ/chồng)</option>
+          </select>
+        </label>
+        <button type="button" id="btn-print" class="btn primary">In gia phả</button>
+      </div>
+      <p class="hint">Sơ đồ dưới đây giống bản <strong>in</strong> (vợ chồng một khung, xếp theo ngày sinh, nét nối xuống con). Phần cuối là bảng nội/ngoại chi tiết. Nhấn <strong>In gia phả</strong> (Ctrl+P) để in.</p>
+    </section>
+
+    <section id="panel-backup" class="panel">
+      <div class="card">
+        <h2>Xuất dữ liệu</h2>
+        <p>Tải file JSON để lưu máy hoặc gửi người thân.</p>
+        <button type="button" id="btn-export" class="btn primary">Tải gia_pha.json</button>
+      </div>
+      <div class="card">
+        <h2>Nhập dữ liệu</h2>
+        <p>Chọn file JSON (sẽ ghi đè dữ liệu hiện tại trong trình duyệt).</p>
+        <input type="file" id="import-file" accept=".json,application/json" />
+      </div>
+      <div class="card">
+        <h2>Bản sao trong trình duyệt</h2>
+        <p class="hint">Mỗi lần <strong>Lưu</strong> thành công, trang giữ thêm một bản ở khóa riêng. Nếu danh sách trống nhầm sau khi nhập file hoặc lỗi lưu, thử khôi phục.</p>
+        <button type="button" id="btn-restore-backup" class="btn">Khôi phục từ bản sao trình duyệt</button>
+      </div>
+    </section>
+    </div>
+
+    <dialog id="share-dialog" class="share-dialog">
+      <form method="dialog" class="share-dialog-inner">
+        <h2>Chia sẻ quyền chỉnh sửa</h2>
+        <p class="hint">Chỉ chủ gia phả mới mời được. Người được mời phải đăng ký bằng đúng email.</p>
+        <label>Email người được mời
+          <input type="email" id="share-invite-email" autocomplete="email" />
+        </label>
+        <div class="form-actions">
+          <button type="button" id="share-btn-invite" class="btn primary">Gửi lời mời</button>
+          <button type="button" id="share-btn-pull" class="btn">Tải bản mới từ máy chủ</button>
+          <button type="submit" class="btn">Đóng</button>
+        </div>
+        <h3>Người đang sửa chung</h3>
+        <p class="hint share-section-hint">Bạn (chủ) và những email đã đăng nhập, được mời — ai ở đây đều chỉnh sửa được gia phả này.</p>
+        <ul id="share-members-list" class="share-access-list"></ul>
+        <h3>Lời mời chờ (chưa đăng nhập)</h3>
+        <ul id="share-invites-list" class="share-access-list"></ul>
+      </form>
+    </dialog>
+
+    <dialog id="upgrade-dialog" class="share-dialog upgrade-dialog">
+      <form method="dialog" class="share-dialog-inner">
+        <h2>Nâng cấp không giới hạn thành viên</h2>
+        <p class="hint">Gói miễn phí: tối đa <strong>30</strong> thành viên. Trả <strong id="upgrade-price">20.000&nbsp;₫</strong> / gia phả để thêm không giới hạn (chỉ áp dụng gia phả này).</p>
+        <div id="upgrade-bank-info" class="upgrade-bank-info card"></div>
+        <p class="meta">Mã thanh toán (nội dung chuyển khoản):</p>
+        <p id="upgrade-payment-code" class="upgrade-payment-code">—</p>
+        <div class="form-actions">
+          <button type="button" id="upgrade-btn-create-code" class="btn primary">Tạo mã &amp; quét VietQR</button>
+          <button type="submit" class="btn">Đóng</button>
+        </div>
+        <div id="upgrade-vietqr-wrap" class="upgrade-vietqr-wrap" hidden>
+          <p class="meta">Quét VietQR (đúng số tiền và mã GP trong nội dung):</p>
+          <img id="upgrade-vietqr" class="upgrade-vietqr" alt="VietQR thanh toán" />
+        </div>
+        <p class="hint">Sau khi chuyển khoản, <strong>SePay</strong> tự kích hoạt gói (~1 phút). Cấu hình một lần: <code>SEPAY-SETUP.txt</code></p>
+      </form>
+    </dialog>
+  </div>
+
+  <!-- Vùng in: luôn render cây ở đây -->
+  <div id="print-root" class="print-root">
+    <header class="print-header">
+      <h1>Gia phả</h1>
+      <p id="print-caption" class="print-caption"></p>
+    </header>
+    <div id="tree-display" class="tree-display" aria-live="polite"></div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

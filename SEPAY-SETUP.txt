@@ -1,0 +1,39 @@
+THANH TOÁN TỰ ĐỘNG BẰNG SEPAY (không cần MoMo Doanh nghiệp)
+============================================================
+
+SePay theo dõi tài khoản NGÂN HÀNG CÁ NHÂN — khi có tiền vào + đúng mã GP… → tự bật gói không giới hạn.
+
+1) ĐĂNG KÝ SEPAY
+   - https://my.sepay.vn (hoặc sepay.vn)
+   - Liên kết tài khoản MB Bank (trùng số trong config.js)
+   - Cấu hình mã thanh toán: tiền tố GP (xem docs SePay → Cấu hình mã thanh toán)
+
+2) WEBHOOK TRÊN SEPAY
+   - Vào Công ty → Tích hợp → Webhooks → Thêm
+   - URL: https://ekeckqvdlfoasafoucvp.supabase.co/functions/v1/sepay-webhook
+     (thay ekeckqvdlfoasafoucvp bằng project-ref Supabase của bạn)
+   - Kiểu: JSON
+   - Xác thực: Apikey → tạo key → copy
+
+3) SUPABASE SECRETS (Edge Functions)
+   SEPAY_WEBHOOK_API_KEY = (Apikey vừa tạo ở SePay)
+   PREMIUM_AMOUNT_VND = 20000
+
+4) DEPLOY EDGE FUNCTION
+   npm install -g supabase
+   supabase login
+   supabase link --project-ref ekeckqvdlfoasafoucvp
+   cd Gia_pha
+   supabase functions deploy sepay-webhook --no-verify-jwt
+
+5) LUỒNG KHÁCH HÀNG
+   - Nâng cấp → Tạo mã thanh toán → quét VietQR / chuyển khoản
+   - Nội dung CK: đúng mã GP… (vd GP8A2F3C1)
+   - Số tiền: 20.000đ
+   - Trong ~1 phút: gói tự kích hoạt (F5 trang)
+
+6) KIỂM TRA
+   - Supabase → Edge Functions → sepay-webhook → Logs
+   - SePay → Lịch sử webhook
+
+Lưu ý: Vẫn có thể xác nhận tay: select gp_confirm_premium_order('GPXXXX');
