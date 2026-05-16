@@ -101,8 +101,11 @@ export function initAccountPanel(h) {
   // Không gọi async trực tiếp trong callback — Supabase có thể không cập nhật session (đặc biệt sau Google OAuth).
   onAuthStateChange((session, event) => {
     applySessionToShell(session);
-    // Alt+Tab / làm mới tab thường chỉ TOKEN_REFRESHED — không tải lại gia phả (tránh ghi đè form đang nhập).
-    if (event === "TOKEN_REFRESHED") return;
+    if (hooks.isMemberFormDirty?.()) {
+      hooks.saveMemberFormDraft?.();
+    }
+    // Alt+Tab / làm mới token — không tải lại gia phả (tránh ghi đè form đang nhập).
+    if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") return;
     setTimeout(() => {
       refreshAccountUi(session).catch((e) => {
         console.error("refreshAccountUi", e);
@@ -362,31 +365,43 @@ async function refreshAccountUi(knownSession) {
 
   document.body.dataset.activeFamilyId = activeId || "";
 
+  const sameFamily = Boolean(activeId && activeId === lastLoadedFamilyId);
+  const formBusy = Boolean(hooks.isMemberFormDirty?.());
+
   if (activeId) {
     setSyncStatus("Đang đồng bộ gia phả chung…", "sync");
     try {
       const billing = await getFamilyBilling(activeId).catch(() => null);
       setCurrentBilling(billing);
-      const loaded = await loadFamilyState(activeId);
-      if (loaded) {
-        hooks.setCloudMeta({ familyId: activeId, updatedAt: loaded.updatedAt });
-        hooks.applyState(loaded.state);
-        hooks.refreshUi();
-        lastLoadedFamilyId = activeId;
-        if (billing?.is_unlimited) {
-          setSyncStatus("Gói không giới hạn thành viên. Đã đồng bộ đám mây.", "ok");
-        } else {
-          setSyncStatus(
-            `Miễn phí ${billing?.member_count ?? "?"}/${billing?.max_members ?? 30} thành viên. Đã đồng bộ đám mây.`,
-            "ok"
-          );
+
+      if (!sameFamily) {
+        const loaded = await loadFamilyState(activeId);
+        if (loaded) {
+          hooks.setCloudMeta({ familyId: activeId, updatedAt: loaded.updatedAt });
+          hooks.applyState(loaded.state);
+          lastLoadedFamilyId = activeId;
         }
+      }
+
+      hooks.refreshUi();
+
+      if (sameFamily && formBusy) {
+        setSyncStatus("Đang nhập dở — giữ nguyên, chưa tải lại từ máy chủ.", "warn");
+      } else if (billing?.is_unlimited) {
+        setSyncStatus("Gói không giới hạn thành viên. Đã đồng bộ đám mây.", "ok");
+      } else {
+        setSyncStatus(
+          `Miễn phí ${billing?.member_count ?? "?"}/${billing?.max_members ?? 30} thành viên. Đã đồng bộ đám mây.`,
+          "ok"
+        );
       }
     } catch (e) {
       setSyncStatus("Lỗi tải: " + (e?.message || e), "err");
-      lastLoadedFamilyId = "";
-      hooks.replaceAppState(EMPTY_STATE);
-      hooks.refreshUi();
+      if (!sameFamily) {
+        lastLoadedFamilyId = "";
+        hooks.replaceAppState(EMPTY_STATE);
+        hooks.refreshUi();
+      }
     }
   } else {
     lastLoadedFamilyId = "";

@@ -1608,9 +1608,33 @@ document.querySelectorAll(".tab").forEach((tab) => {
 form?.addEventListener("input", scheduleMemberFormDraftSave);
 form?.addEventListener("change", scheduleMemberFormDraftSave);
 
+function restoreMemberFormDraftIfNeeded() {
+  const draft = loadMemberFormDraft();
+  if (!draft || !isDraftMeaningful(draft)) return;
+  const wantId = draft.memberId || "";
+  const curId = fId.value || editingId || "";
+  if (memberFormOpen && curId === wantId) {
+    if (!isMemberFormDirty()) applyMemberFormDraft(draft);
+    return;
+  }
+  if (!memberFormOpen) {
+    openForm(draft.mode === "edit" && draft.memberId ? draft.memberId : null, { skipDraftSave: true });
+  }
+}
+
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden" && memberFormOpen) {
-    saveMemberFormDraft();
+  if (document.visibilityState === "hidden") {
+    if (memberFormOpen) saveMemberFormDraft();
+    return;
+  }
+  if (document.visibilityState === "visible") {
+    requestAnimationFrame(() => restoreMemberFormDraftIfNeeded());
+  }
+});
+
+window.addEventListener("focus", () => {
+  if (document.visibilityState === "visible") {
+    restoreMemberFormDraftIfNeeded();
   }
 });
 
