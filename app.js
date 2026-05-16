@@ -1,7 +1,7 @@
 import { collectChartMembers, buildPrintDiagramHtml } from "./pedigree.js";
 import { isCloudConfigured } from "./config.js";
 import { saveFamilyState, subscribeFamily, uploadMemberAvatar } from "./cloud.js";
-import { initAccountPanel, setSyncStatus, isFamilyReadOnly } from "./account.js";
+import { initAccountPanel, setSyncStatus, isFamilyReadOnly, refreshFamilySyncStatusIfIdle } from "./account.js";
 import {
   canAddMembers,
   showQuotaBlockedMessage,
@@ -668,16 +668,43 @@ function isDraftMeaningful(draft) {
   return false;
 }
 
-function captureMemberFormDraft() {
+/** Chuẩn hóa để so sánh «có sửa hay chưa» — tránh báo nháp sai sau Alt+Tab. */
+function normalizeFormSnapshot(d) {
+  const memberId = d.memberId ?? (fId?.value || editingId || "");
   return {
-    v: 1,
-    familyId: cloudMeta.familyId || "local",
+    memberId: String(memberId || ""),
+    mode: d.mode || (memberId ? "edit" : "new"),
+    hoTen: String(d.hoTen ?? "").trim(),
+    gioiTinh: String(d.gioiTinh ?? ""),
+    ngaySinh: String(d.ngaySinh ?? "").trim(),
+    thangSinh: String(d.thangSinh ?? "").trim(),
+    namSinh: String(d.namSinh ?? "").trim(),
+    namMat: String(d.namMat ?? "").trim(),
+    chaId: String(d.chaId ?? ""),
+    meId: String(d.meId ?? ""),
+    voChongId: String(d.voChongId ?? ""),
+    anhUrl: String(d.anhUrl ?? "").trim(),
+    anhFocus: sanitizeAnhFocus(d.anhFocus) || "",
+    ghiChu: String(d.ghiChu ?? "").trim(),
+    newChildRows: (d.newChildRows || []).map((r) => ({
+      hoTen: String(r.hoTen ?? "").trim(),
+      ngaySinh: String(r.ngaySinh ?? "").trim(),
+      thangSinh: String(r.thangSinh ?? "").trim(),
+      namSinh: String(r.namSinh ?? "").trim(),
+      gioiTinh: String(r.gioiTinh ?? ""),
+    })),
+    pendingExistingChildIds: [...(d.pendingExistingChildIds || [])].sort(),
+  };
+}
+
+function captureMemberFormDraft() {
+  const snap = normalizeFormSnapshot({
     memberId: fId.value || editingId || "",
     mode: fId.value || editingId ? "edit" : "new",
     hoTen: fName.value,
     gioiTinh: fGender.value,
-    ngaySinh: String(fBirthDay.value ?? ""),
-    thangSinh: String(fBirthMonth.value ?? ""),
+    ngaySinh: fBirthDay.value,
+    thangSinh: fBirthMonth.value,
     namSinh: fBirth.value,
     namMat: fDeath.value,
     chaId: fFather.value || "",
@@ -687,7 +714,12 @@ function captureMemberFormDraft() {
     anhFocus: fAvatarFocus?.value || "",
     ghiChu: fNote.value,
     newChildRows: collectNewChildRows(),
-    pendingExistingChildIds: [...pendingExistingChildIds],
+    pendingExistingChildIds: pendingExistingChildIds,
+  });
+  return {
+    v: 1,
+    familyId: cloudMeta.familyId || "local",
+    ...snap,
     savedAt: Date.now(),
   };
 }
@@ -761,13 +793,14 @@ function closeMemberForm(opts = {}) {
 }
 
 function snapshotFormBaseline() {
-  formBaseline = JSON.stringify(captureMemberFormDraft());
+  formBaseline = JSON.stringify(normalizeFormSnapshot(captureMemberFormDraft()));
   return formBaseline;
 }
 
 function isMemberFormDirty() {
   if (!memberFormOpen || !formBaseline) return false;
-  return JSON.stringify(captureMemberFormDraft()) !== formBaseline;
+  const cur = JSON.stringify(normalizeFormSnapshot(captureMemberFormDraft()));
+  return cur !== formBaseline;
 }
 
 function saveMemberFormDraft() {
@@ -1661,13 +1694,17 @@ document.addEventListener("visibilitychange", () => {
     return;
   }
   if (document.visibilityState === "visible") {
-    requestAnimationFrame(() => restoreMemberFormDraftIfNeeded());
+    requestAnimationFrame(() => {
+      restoreMemberFormDraftIfNeeded();
+      refreshFamilySyncStatusIfIdle();
+    });
   }
 });
 
 window.addEventListener("focus", () => {
   if (document.visibilityState === "visible") {
     restoreMemberFormDraftIfNeeded();
+    refreshFamilySyncStatusIfIdle();
   }
 });
 
@@ -1827,8 +1864,10 @@ initAccountPanel({
   replaceAppState,
   refreshUi: () => {
     fillFocalSelects();
-    fillRelationSelects();
-    resyncRelationFieldsIfEditing();
+    if (!memberFormOpen || isMemberFormDirty()) {
+      fillRelationSelects();
+      resyncRelationFieldsIfEditing();
+    }
     renderMemberList();
     renderTree(membersSorted(), state.focalId);
     applyFamilyReadOnlyUi();

@@ -106,6 +106,7 @@ export function initAccountPanel(h) {
     }
     // Alt+Tab / làm mới token — không tải lại gia phả (tránh ghi đè form đang nhập).
     if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") return;
+    if (event === "INITIAL_SESSION" && lastLoadedFamilyId) return;
     setTimeout(() => {
       refreshAccountUi(session).catch((e) => {
         console.error("refreshAccountUi", e);
@@ -201,6 +202,22 @@ export function setSyncStatus(text, kind = "") {
   if (!node) return;
   node.textContent = text;
   node.className = "cloud-sync-status" + (kind ? ` cloud-sync-status--${kind}` : "");
+}
+
+/** Sau Alt+Tab: bỏ dòng vàng «đang nhập» nếu form không thực sự đổi. */
+export function refreshFamilySyncStatusIfIdle() {
+  if (hooks.isMemberFormDirty?.()) return;
+  const activeId = getActiveFamilyId(currentUserId || undefined);
+  if (!activeId || !lastLoadedFamilyId) return;
+  const bill = getCurrentBilling();
+  if (bill?.is_unlimited) {
+    setSyncStatus("Gói không giới hạn thành viên. Đã đồng bộ đám mây.", "ok");
+  } else {
+    setSyncStatus(
+      `Miễn phí ${bill?.member_count ?? "?"}/${bill?.max_members ?? 30} thành viên. Đã đồng bộ đám mây.`,
+      "ok"
+    );
+  }
 }
 
 function setAppShell(open) {
@@ -366,7 +383,6 @@ async function refreshAccountUi(knownSession) {
   document.body.dataset.activeFamilyId = activeId || "";
 
   const sameFamily = Boolean(activeId && activeId === lastLoadedFamilyId);
-  const formBusy = Boolean(hooks.isMemberFormDirty?.());
 
   if (activeId) {
     setSyncStatus("Đang đồng bộ gia phả chung…", "sync");
@@ -385,8 +401,9 @@ async function refreshAccountUi(knownSession) {
 
       hooks.refreshUi();
 
-      if (sameFamily && formBusy) {
-        setSyncStatus("Đang nhập dở — giữ nguyên, chưa tải lại từ máy chủ.", "warn");
+      const stillEditing = Boolean(hooks.isMemberFormDirty?.());
+      if (sameFamily && stillEditing) {
+        setSyncStatus("Đang sửa — chưa lưu (chưa tải lại từ máy chủ).", "warn");
       } else if (billing?.is_unlimited) {
         setSyncStatus("Gói không giới hạn thành viên. Đã đồng bộ đám mây.", "ok");
       } else {
