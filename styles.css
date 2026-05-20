@@ -23,6 +23,25 @@ body {
   line-height: 1.45;
 }
 
+.page-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-layout > .app {
+  flex: 0 0 auto;
+}
+
+.page-layout > .print-root {
+  flex: 1 1 auto;
+}
+
+.page-layout > .site-footer--app {
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
 .app {
   max-width: 1100px;
   margin: 0 auto;
@@ -2423,6 +2442,10 @@ body.show-tree-tab .print-root {
 
 .site-footer--app {
   margin-top: 2rem;
+}
+
+.page-layout > .site-footer--app {
+  margin-top: auto;
 }
 
 .site-footer--compact {

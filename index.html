@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div class="page-layout">
   <div class="app no-print">
     <header class="top top-bar">
       <div class="top-brand">
@@ -361,29 +362,7 @@
       </form>
     </dialog>
 
-    <footer class="site-footer site-footer--app no-print">
-      <div class="site-footer-inner">
-        <div class="site-footer-col">
-          <p class="site-footer-brand">Gia phả</p>
-          <p class="meta">Lưu cây phả hệ, ảnh chân dung, in sơ đồ — chia sẻ với họ hàng.</p>
-        </div>
-        <div class="site-footer-col">
-          <p class="site-footer-heading">Liên kết</p>
-          <ul class="site-footer-links">
-            <li><a href="blog.html">Blog &amp; hướng dẫn</a></li>
-            <li><a href="index.html#cloud-auth-block">Đăng ký miễn phí</a></li>
-          </ul>
-        </div>
-        <div class="site-footer-col">
-          <p class="site-footer-heading">Pháp lý</p>
-          <ul class="site-footer-links">
-            <li><a href="terms.html">Điều khoản</a></li>
-            <li><a href="privacy.html">Quyền riêng tư</a></li>
-          </ul>
-        </div>
-      </div>
-      <p class="site-footer-copy meta">© <span id="footer-year"></span> <span id="footer-author"></span> · Gia phả</p>
-    </footer>
+
   </div>
 
   <!-- Vùng in: luôn render cây ở đây -->
@@ -393,6 +372,31 @@
       <p id="print-caption" class="print-caption"></p>
     </header>
     <div id="tree-display" class="tree-display" aria-live="polite"></div>
+  </div>
+
+  <footer class="site-footer site-footer--app no-print">
+    <div class="site-footer-inner">
+      <div class="site-footer-col">
+      <p class="site-footer-brand">Gia phả</p>
+      <p class="meta">Lưu cây phả hệ, ảnh chân dung, in sơ đồ — chia sẻ với họ hàng.</p>
+      </div>
+      <div class="site-footer-col">
+      <p class="site-footer-heading">Liên kết</p>
+      <ul class="site-footer-links">
+      <li><a href="blog.html">Blog &amp; hướng dẫn</a></li>
+      <li><a href="index.html#cloud-auth-block">Đăng ký miễn phí</a></li>
+      </ul>
+      </div>
+      <div class="site-footer-col">
+      <p class="site-footer-heading">Pháp lý</p>
+      <ul class="site-footer-links">
+      <li><a href="terms.html">Điều khoản</a></li>
+      <li><a href="privacy.html">Quyền riêng tư</a></li>
+      </ul>
+      </div>
+    </div>
+    <p class="site-footer-copy meta">© <span id="footer-year"></span> <span id="footer-author"></span> · Gia phả</p>
+  </footer>
   </div>
 
   <script type="module" src="app.js"></script>
